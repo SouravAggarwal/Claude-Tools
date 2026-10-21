@@ -13,8 +13,6 @@ See where a long job is at a glance. Use several Claude accounts from one chat, 
 
 [The tools](#-the-tools) · [See them](#-see-them) · [Install](#-install) · [Ask your AI to install](#-or-just-ask-your-ai) · [Add your own](#-add-your-own-tool)
 
-<img src="docs/images/progress-bar-desktop.png" alt="The task progress bar above the prompt in the Claude desktop app: 3 of 5 done, Running tests" width="720">
-
 </div>
 
 ---
