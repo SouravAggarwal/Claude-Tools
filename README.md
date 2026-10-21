@@ -34,6 +34,8 @@ Each tool has its own folder with a **README** (for you) and an **AGENT.md** (fo
 
 <img src="docs/images/progress-bar-terminal.png" alt="The task progress bar in a terminal session: an orange bar, 3 of 5 done, Running tests, hide" width="760">
 
+<img src="docs/images/progress-bar-desktop.png" alt="The task progress bar above the prompt in the Claude desktop app: 3 of 5 done, Running tests" width="680">
+
 **Multi-account**, the `claude-accounts` live view (also inside the app: type `/accounts`):
 
 <img src="docs/images/accounts-dashboard.png" alt="The claude-accounts dashboard: two accounts with 5-hour and weekly limit bars, the active one marked, and each chat's project, context and current work" width="760">
