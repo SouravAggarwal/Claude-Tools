@@ -76,7 +76,8 @@ In the desktop chat, just ask for what you need. These phrases also work:
 
 | Say | It runs |
 | --- | --- |
-| "use claude-a" | `claude-use claude-a` |
+| "use claude-a" | `claude-use claude-a` (from now on, every task goes there) |
+| "on claude-a: fix the login test" | `claude-ask --account claude-a …` (just this task; the active account stays) |
 | "use the best one" | `claude-use --best` (the signed-in account with the most room) |
 | "limits" | `claude-use` |
 | "here: …" | does it in the desktop chat itself |
@@ -157,6 +158,7 @@ The commands update at once. For the add-on, type `/reload-plugins` in an open c
 - **The front desk uses a little of the desktop app's account** for every message. If that account runs out, the app stops too. Sign the app in to another account, then run `claude-accounts-add <that tag> "<label>" --desktop`.
 - **Keep front-desk chats short** and start new ones often. The real conversation lives in the worker's chat, so nothing is lost.
 - **The desktop app's own history is not shared.** Workers share their history with each other, not with the app's chats.
+- **One chat per folder.** Tasks in the same project folder share one chat, whichever account runs them, so run them one after another. Tasks in different folders can run at the same time on different accounts.
 - **Workers cannot ask you to approve things.** They run in the background in auto mode. To change that, set `permissionMode` for an account in `config.json` (for example `acceptEdits` only allows file edits).
 
 ## Troubleshooting
