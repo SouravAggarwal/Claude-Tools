@@ -19,10 +19,36 @@ See where a long job is at a glance. Use several Claude accounts from one chat, 
 
 ## ✨ The tools
 
-| Tool | What it does | You want it when | Looks like |
-| --- | --- | --- | :-: |
-| 📊 **[Task progress bar](tools/task-progress)** | Draws a live bar above the prompt box: `███████░░░░ 3 of 5 done  Running tests`. Turns green when the job is done. | Claude works through long, many-step jobs and you want to know how far it has got without scrolling. | <a href="docs/images/progress-bar-terminal.png"><img src="docs/images/progress-bar-terminal.png" alt="The progress bar in a terminal: an orange bar, 3 of 5 done, Running tests, hide" width="340"></a><br>Terminal<br><br><a href="docs/images/progress-bar-desktop.png"><img src="docs/images/progress-bar-desktop.png" alt="The progress bar above the prompt in the Claude desktop app: 3 of 5 done, Running tests" width="340"></a><br>Desktop app |
-| 🔀 **[Multi-account](tools/multi-account)** | Lets you talk in one desktop chat while the work runs on whichever of your Claude accounts is active. Switch any time and the chat carries on, with nothing lost. Shows every account's 5-hour and weekly limits live. | You have more than one Claude account, each with a small limit, and you are tired of hitting a wall in the middle of a task. | <a href="docs/images/accounts-dashboard.png"><img src="docs/images/accounts-dashboard.png" alt="The claude-accounts live view: two accounts with 5-hour and weekly limit bars, the active one marked, and each chat's project, context and current work" width="340"></a><br>`claude-accounts`, or `/accounts` in the app |
+<table>
+  <tr>
+    <th>Tool</th>
+    <th>What it does</th>
+    <th>You want it when</th>
+  </tr>
+  <tr>
+    <td>📊 <b><a href="tools/task-progress">Task progress bar</a></b></td>
+    <td>Draws a live bar above the prompt box: <code>███████░░░░ 3 of 5 done  Running tests</code>. Turns green when the job is done.</td>
+    <td>Claude works through long, many-step jobs and you want to know how far it has got without scrolling.</td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center">
+      <a href="docs/images/progress-bar-terminal.png"><img src="docs/images/progress-bar-terminal.png" alt="The progress bar in a terminal: an orange bar, 3 of 5 done, Running tests, hide" width="49%"></a>
+      <a href="docs/images/progress-bar-desktop.png"><img src="docs/images/progress-bar-desktop.png" alt="The progress bar above the prompt in the Claude desktop app: 3 of 5 done, Running tests" width="44%"></a>
+      <br><sub>In the terminal and in the desktop app</sub>
+    </td>
+  </tr>
+  <tr>
+    <td>🔀 <b><a href="tools/multi-account">Multi-account</a></b></td>
+    <td>Lets you talk in one desktop chat while the work runs on whichever of your Claude accounts is active. Switch any time and the chat carries on, with nothing lost. Shows every account's 5-hour and weekly limits live.</td>
+    <td>You have more than one Claude account, each with a small limit, and you are tired of hitting a wall in the middle of a task.</td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center">
+      <a href="docs/images/accounts-dashboard.png"><img src="docs/images/accounts-dashboard.png" alt="The claude-accounts live view: two accounts with 5-hour and weekly limit bars, the active one marked, and each chat's project, context and current work" width="70%"></a>
+      <br><sub>The <code>claude-accounts</code> live view (also inside the app: type <code>/accounts</code>)</sub>
+    </td>
+  </tr>
+</table>
 
 Each tool has its own folder with a **README** (for you) and an **AGENT.md** (for your AI agent). Pictures are rendered from each tool's real output with demo data; click one to see it full size.
 
