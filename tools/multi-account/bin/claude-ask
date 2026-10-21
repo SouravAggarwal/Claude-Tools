@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Sends one message to the active Claude account, working in a project folder, and prints its reply.
+"""Sends one message to the account that does the work, in a project folder, and prints its reply.
 
-The active account is `active` in ~/.claude-accounts/config.json (set it with claude-use). Each
-folder keeps ONE chat that every worker account shares: their chat history folders all point at
+The secondary account does the work (set it with claude-use). With no secondary, or when the
+secondary is the account the desktop app is signed in to, a desktop chat is told to do the task
+itself (exit code 3), so no account is spent twice; from a terminal, the primary does it.
+
+Each folder keeps ONE chat that every account shares: their chat history folders all point at
 ~/.claude-accounts/shared, so after a switch the next account picks up the same chat with
 nothing lost. (It re-reads the whole chat once, which costs that account a bit more.)
 
 Usage: claude-ask [--new] [--account TAG] FOLDER MESSAGE...
-       claude-ask --which FOLDER     prints the account a message would go to, and the project
+       claude-ask --which FOLDER     prints who a message would go to ("here" or a tag), and the project
   --new      start that folder's chat over
-  --account  use this account for this one message instead of the active one
-Exit code 3: that account is the desktop app's front desk, not a worker.
+  --account  use this account for this one message
+Exit code 3: do this task in the desktop chat itself.
 """
 import argparse
 import hashlib
@@ -21,26 +24,25 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path.home() / ".claude-accounts"
-CONFIG = ROOT / "config.json"
-CHATS = ROOT / "chats"
-# Sign-in and session details of whichever Claude started us; the worker must never see them.
-INHERITED = ("CLAUDE", "ANTHROPIC", "USE_LOCAL_OAUTH", "USE_STAGING_OAUTH")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import claude_accounts_lib as lib  # noqa: E402
+
+CHATS = lib.ROOT / "chats"
 HANDED_OVER = (
     "This request was handed to you by claude-ask: you are the account doing the work. "
     "Do the work yourself, and never pass it on with claude-ask."
 )
-
-
-def expand(path):
-    return os.path.normpath(os.path.expanduser(path))
+DO_IT_HERE = (
+    "No other account to hand this to: {why}. Do this task here, in the desktop chat, "
+    "and do not call claude-ask for it."
+)
 
 
 def project_for(config, folder):
     best = (None, -1)
     for name, project in config.get("projects", {}).items():
         for raw in project.get("folders", []):
-            root = expand(raw)
+            root = lib.expand(raw)
             if (folder == root or folder.startswith(root + os.sep)) and len(root) > best[1]:
                 best = (name, len(root))
     return best[0]
@@ -50,7 +52,7 @@ def record_context(reply):
     """Background chats have no live context figure: work it out from the last model call of this run."""
     calls = (reply.get("usage") or {}).get("iterations") or []
     windows = [model.get("contextWindow") for model in (reply.get("modelUsage") or {}).values() if model.get("contextWindow")]
-    status_file = ROOT / "status" / f"{reply.get('session_id')}.json"
+    status_file = lib.STATUS / f"{reply.get('session_id')}.json"
     if not calls or not windows or not status_file.exists():
         return
     last = calls[-1]
@@ -76,29 +78,37 @@ def main():
     parser.add_argument("message", nargs="*")
     args = parser.parse_args()
 
-    config = json.loads(CONFIG.read_text())
-    folder = os.path.abspath(expand(args.folder))
+    config = lib.load()
+    folder = os.path.abspath(lib.expand(args.folder))
     if not os.path.isdir(folder):
         sys.exit(f"claude-ask: no such folder: {folder}")
     project = project_for(config, folder) or "other"
-    tag = args.account or config.get("active")
-    if tag is None:
-        sys.exit("claude-ask: no active account yet. Add one with claude-accounts-add, then pick it with claude-use.")
-    account = config["accounts"].get(tag)
-    if account is None:
-        sys.exit(f"claude-ask: account {tag!r} is not in {CONFIG}")
+
+    if args.account:
+        if args.account not in config["accounts"]:
+            sys.exit(f"claude-ask: no account {args.account!r} in {lib.CONFIG}")
+        tag = None if lib.is_app_account(config, args.account) else args.account
+        why = f"{args.account} is the account this app is signed in to"
+    else:
+        tag = lib.worker(config)
+        why = "no secondary account is set" if not config.get("secondary") else (
+            f"the secondary ({config['secondary']}) is the account this app is signed in to")
 
     if args.which:
-        print(f"{tag} {project}")
+        print(f"{tag or 'here'} {project}")
         return
     if not args.message:
         sys.exit("claude-ask: a message is required")
-    if account.get("desktopApp") and not account.get("worker"):
-        print(f"{tag} is the desktop app's front desk, not a worker. Pick a worker with claude-use.", file=sys.stderr)
-        sys.exit(3)
+    if tag is None:
+        if lib.in_desktop_chat():
+            print(DO_IT_HERE.format(why=why), file=sys.stderr)
+            sys.exit(3)
+        sys.exit("claude-ask: no accounts yet. Add one with: claude-accounts-add TAG EMAIL --primary")
 
-    env = {key: value for key, value in os.environ.items() if not key.startswith(INHERITED)}
-    env["CLAUDE_CONFIG_DIR"] = expand(account["configDir"])
+    account = config["accounts"][tag]
+    env = lib.clean_env(account)
+    # A worker waits for its own background helpers instead of stopping them after 10 minutes.
+    env["CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"] = os.environ.get("CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS", "0")
 
     CHATS.mkdir(parents=True, exist_ok=True)
     chat_file = CHATS / f"{hashlib.sha1(folder.encode()).hexdigest()[:16]}.json"

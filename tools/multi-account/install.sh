@@ -1,6 +1,7 @@
 #!/bin/bash
 # Installs multi-account: the commands, the account-status add-on and the desktop front desk.
-# Run it from a clone of Claude Tools:  tools/multi-account/install.sh
+# Run it from a clone of Claude Tools:  tools/multi-account/install.sh [--refresh-rule]
+#   --refresh-rule  replace your front-desk rule with this version's (after `git pull`)
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -20,7 +21,9 @@ done
 
 # 2. Your account list and the front-desk rule (an existing one is kept as it is).
 [ -f "$accounts/config.json" ] || cp "$here/templates/config.json" "$accounts/config.json"
-[ -f "$accounts/front-desk-rule.md" ] || cp "$here/templates/front-desk-rule.md" "$accounts/front-desk-rule.md"
+if [ ! -f "$accounts/front-desk-rule.md" ] || [ "${1:-}" = "--refresh-rule" ]; then
+  cp "$here/templates/front-desk-rule.md" "$accounts/front-desk-rule.md"
+fi
 
 # 3. Desktop app chats load the front-desk rule when they start. Terminal and worker chats never do.
 [ -f "$settings" ] || echo '{}' > "$settings"
@@ -42,8 +45,10 @@ esac
 cat <<'NEXT'
 
 Installed. Next:
-  1. Add the account your desktop app is signed in to:   claude-accounts-add claude-a "you@example.com" --desktop
-  2. Add each other account:                               claude-accounts-add claude-b "other@example.com"
-  3. Sign each one in with the line it prints, then pick the one to work:   claude-use claude-b
-  4. Start a new desktop chat and ask as usual. Type /accounts or run claude-accounts to watch the limits.
+  1. Add the account your desktop app is signed in to:   claude-accounts-add claude-a you@example.com --primary
+  2. Optional, a second account to do the work:          claude-accounts-add claude-b other@example.com
+     sign it in with the line it prints, then:           claude-use --secondary claude-b
+     (no secondary: the desktop chat does everything itself, on the primary)
+  3. Start a new desktop chat and ask as usual. Change roles any time by asking, for example
+     "turn off the secondary" or "swap primary and secondary". Type /accounts to watch the limits.
 NEXT

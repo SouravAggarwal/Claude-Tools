@@ -1,21 +1,16 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { accountFor, isShown, latestLimits, projectFor, toolActivity, untilText } from '../hooks/status'
+import { accountFor, isShown, latestLimits, projectFor, roleOf, toolActivity, untilText } from '../hooks/status'
 import type { Config, SessionStatus } from '../hooks/status'
 
 const HOME = '/home/demo'
 const CONFIG: Config = {
-  active: 'claude-b',
+  primary: 'claude-a',
+  secondary: 'claude-b',
   accounts: {
-    'claude-a': {
-      label: 'a@example.com',
-      configDir: '~/.claude-accounts/homes/claude-a',
-      desktopConfigDir: '~/.claude',
-      desktopApp: true,
-      worker: true,
-    },
-    'claude-b': { label: 'b@example.com', configDir: '~/.claude-accounts/homes/claude-b' },
+    'claude-a': { email: 'a@example.com', configDir: '~/.claude-accounts/homes/claude-a' },
+    'claude-b': { email: 'b@example.com', configDir: '~/.claude-accounts/homes/claude-b' },
   },
   projects: {
     shop: { folders: ['~/code/shop'] },
@@ -50,8 +45,20 @@ function status(over: Partial<SessionStatus>): SessionStatus {
 describe('matching folders and accounts', () => {
   test('finds the account by its Claude folder', () => {
     expect(accountFor(CONFIG, `${HOME}/.claude-accounts/homes/claude-b/`, HOME)).toBe('claude-b')
-    expect(accountFor(CONFIG, `${HOME}/.claude`, HOME)).toBe('claude-a')
     expect(accountFor(CONFIG, `${HOME}/.claude-accounts/homes/claude-a`, HOME)).toBe('claude-a')
+    expect(accountFor(CONFIG, `${HOME}/.claude`, HOME)).toBe('claude-a')
+  })
+
+  test('a desktop chat goes by the account the app is signed in to, even after the app switches', () => {
+    expect(accountFor(CONFIG, `${HOME}/.claude`, HOME, 'B@example.com')).toBe('claude-b')
+    expect(accountFor(CONFIG, `${HOME}/.claude`, HOME, 'stranger@example.com')).toBe('claude-a')
+  })
+
+  test('names each role', () => {
+    expect(roleOf(CONFIG, 'claude-a')).toBe('primary · desktop app')
+    expect(roleOf(CONFIG, 'claude-b')).toBe('secondary · does the work')
+    expect(roleOf({ ...CONFIG, secondary: null }, 'claude-a')).toBe('primary · desktop app · does the work')
+    expect(roleOf({ ...CONFIG, secondary: null }, 'claude-b')).toBe('spare')
     expect(accountFor(CONFIG, '/elsewhere', HOME)).toBe('unknown')
   })
 
@@ -188,8 +195,8 @@ describe('reporting a session', () => {
       expect(await ui.find({ type: 'Text', text: 'claude-b' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: '42%' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: 'web-app · web-app' })).toBeDefined()
-      expect(await ui.find({ type: 'Text', text: 'worker · ★ active' })).toBeDefined()
-      expect(await ui.find({ type: 'Text', text: 'desktop app + worker' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: 'secondary · does the work' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: 'primary · desktop app' })).toBeDefined()
     })
   }
 })

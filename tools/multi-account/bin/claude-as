@@ -2,32 +2,26 @@
 """Opens Claude Code in this terminal as one of your accounts.
 
 Usage: claude-as [TAG] [any claude arguments]   for example: claude-as, or claude-as claude-b
-With no TAG it opens the active account (the one claude-use set), so `claude-as` can stand in
-for `claude`. The chat uses that account's own sign-in and the shared chat history.
+With no TAG it opens the account that does the work: the secondary, or the primary when the
+secondary is off. So `claude-as` can stand in for `claude`. The chat uses that account's own
+sign-in and the shared chat history.
 """
-import json
 import os
 import sys
 from pathlib import Path
 
-CONFIG = Path.home() / ".claude-accounts" / "config.json"
-INHERITED = ("CLAUDE", "ANTHROPIC", "USE_LOCAL_OAUTH", "USE_STAGING_OAUTH")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import claude_accounts_lib as lib  # noqa: E402
 
 
 def main():
-    config = json.loads(CONFIG.read_text())
+    config = lib.load()
     named = len(sys.argv) > 1 and sys.argv[1] in config["accounts"]
-    tag = sys.argv[1] if named else config.get("active")
+    tag = sys.argv[1] if named else lib.worker(config) or config.get("primary")
     rest = sys.argv[2:] if named else sys.argv[1:]
     if tag is None:
-        sys.exit("claude-as: no active account yet. Pick one with claude-use.")
-    account = config["accounts"].get(tag)
-    if account is None:
-        sys.exit(f"claude-as: no account {tag!r} in {CONFIG}")
-    # Drop any sign-in details inherited from another Claude, so only this account's own is used.
-    env = {k: v for k, v in os.environ.items() if not k.startswith(INHERITED)}
-    env["CLAUDE_CONFIG_DIR"] = os.path.expanduser(account["configDir"])
-    os.execvpe("claude", ["claude", *rest], env)
+        sys.exit("claude-as: no accounts yet. Add one with: claude-accounts-add TAG EMAIL --primary")
+    os.execvpe("claude", ["claude", *rest], lib.clean_env(config["accounts"][tag]))
 
 
 if __name__ == "__main__":

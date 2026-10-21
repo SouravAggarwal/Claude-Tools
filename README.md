@@ -4,7 +4,7 @@
 
 **Small, sharp add-ons that make [Claude Code](https://code.claude.com) nicer to live with.**
 
-See where a long job is at a glance. Use several Claude accounts from one chat, and switch between them without losing a word.
+See where a long job is at a glance. Run the work on a second Claude account from the same chat, and swap the two without losing a word.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 [![Claude Code add-ons](https://img.shields.io/badge/Claude%20Code-add--ons-d97757)](https://code.claude.com)
@@ -42,8 +42,8 @@ See where a long job is at a glance. Use several Claude accounts from one chat, 
   <tr>
     <td rowspan="2" align="center"><b>2</b></td>
     <td>🔀 <b><a href="tools/multi-account">Multi-account</a></b></td>
-    <td>Lets you talk in one desktop chat while the work runs on whichever of your Claude accounts is active. Switch any time and the chat carries on, with nothing lost. Shows every account's 5-hour and weekly limits live.</td>
-    <td>You have more than one Claude account, each with a small limit, and you are tired of hitting a wall in the middle of a task.</td>
+    <td>You talk in the desktop app (your <b>primary</b> account) while all the work runs on a <b>secondary</b> account. Turn the secondary off and the app does everything itself, with no other account used. Swap the two by just asking, and the chat carries on with nothing lost. Shows every account's 5-hour and weekly limits live.</td>
+    <td>You have two Claude accounts with small limits, and you are tired of hitting a wall in the middle of a task.</td>
   </tr>
   <tr>
     <td colspan="3" align="center">

@@ -2,27 +2,27 @@
 // The terminal dashboard (~/.local/bin/claude-accounts) reads the same files and keeps the same rules.
 
 export type AccountConfig = {
+  /** The email the account signs in with. */
+  email?: string
   label?: string
   /** Its own Claude folder, used when it works through claude-ask. */
   configDir: string
-  /** The desktop app's Claude folder, for the account the app is signed in to. */
-  desktopConfigDir?: string
-  desktopApp?: boolean
-  worker?: boolean
 }
 export type ProjectConfig = { folders: string[] }
 export type Config = {
-  /** The worker claude-ask sends work to; claude-use sets it. */
-  active?: string
+  /** The account the Claude desktop app is signed in to. */
+  primary?: string | null
+  /** The account that does all the work; empty means the primary does everything. */
+  secondary?: string | null
   accounts: Record<string, AccountConfig>
   projects: Record<string, ProjectConfig>
 }
 
 export function roleOf(config: Config, tag: string): string {
-  const account = config.accounts[tag]
-  const role = account?.desktopApp ? (account.worker ? 'desktop app + worker' : 'desktop app') : 'worker'
-
-  return config.active === tag ? `${role} · ★ active` : role
+  const { primary, secondary } = config
+  if (tag === primary) return secondary && secondary !== primary ? 'primary · desktop app' : 'primary · desktop app · does the work'
+  if (tag === secondary) return 'secondary · does the work'
+  return 'spare'
 }
 
 export type RateLimit = { kind: string; percentUsed: number; resetsAt: string | null }
@@ -63,13 +63,18 @@ function isInside(path: string, folder: string): boolean {
   return path === folder || path.startsWith(`${folder}/`)
 }
 
-export function accountFor(config: Config | null, configDir: string, home: string): string {
-  const dir = expandHome(configDir, home)
-  const match = Object.entries(config?.accounts ?? {}).find(([, account]) =>
-    [account.configDir, account.desktopConfigDir].some(folder => folder !== undefined && expandHome(folder, home) === dir),
-  )
+// Which account a chat runs on: a desktop chat by the email the app passes it, a worker by its Claude
+// folder, and anything else in the desktop app's own folder (~/.claude) is the primary.
+export function accountFor(config: Config | null, configDir: string, home: string, email = ''): string {
+  const accounts = Object.entries(config?.accounts ?? {})
+  const byEmail = email === '' ? undefined : accounts.find(([, account]) => (account.email ?? '').toLowerCase() === email.toLowerCase())
+  if (byEmail) return byEmail[0]
 
-  return match ? match[0] : 'unknown'
+  const dir = expandHome(configDir, home)
+  const byFolder = accounts.find(([, account]) => expandHome(account.configDir, home) === dir)
+  if (byFolder) return byFolder[0]
+
+  return dir === expandHome('~/.claude', home) && config?.primary ? config.primary : 'unknown'
 }
 
 // The project whose folder holds `cwd` most closely: a nested project wins over the one around it.

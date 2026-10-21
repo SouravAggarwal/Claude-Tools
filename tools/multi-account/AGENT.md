@@ -44,45 +44,50 @@ It writes a rule that new desktop chats load at start, and adds a start-up hook 
 
 Ask, in one message:
 
-1. Which accounts do you want to use? Give a short name (tag) and a label (for example the email) for each.
-2. Which one is the Claude desktop app signed in to?
-3. Which one should do the work first?
+1. Which account is the Claude desktop app signed in to? (This is the **primary**.) Its email, and a short name (tag) such as `claude-a`.
+2. Do they want a second account to do all the work (the **secondary**)? If yes, its email and a tag such as `claude-b`.
 
-## 5. Add each account
+With one account the desktop chat does every task itself. With two, every project task goes to the secondary.
 
-The one the desktop app uses gets `--desktop`:
+## 5. Add the accounts
 
-```bash
-claude-accounts-add claude-a "you@example.com" --desktop
-```
-
-Every other account:
+The primary:
 
 ```bash
-claude-accounts-add claude-b "other@example.com"
+claude-accounts-add claude-a you@example.com --primary
 ```
 
-## 6. Sign each account in
+The secondary, only if they want one:
 
-For each account, start its sign-in where the person can see it and finish it (a terminal they can type in). Use the line `claude-accounts-add` printed:
+```bash
+claude-accounts-add claude-b other@example.com
+```
+
+## 6. Sign the secondary in
+
+Start its sign-in where the person can see it and finish it (a terminal they can type in). Use the line `claude-accounts-add` printed:
 
 ```bash
 CLAUDE_CONFIG_DIR=~/.claude-accounts/homes/claude-b claude auth login
 ```
 
-Wait until the person says they are done.
+Wait until the person says they are done. The primary's own folder needs the same sign-in only if the person will use it from a terminal (`claude-as`) or may later swap it to secondary; `claude-use` says so when it is needed.
 
-## 7. Pick the active account and check
+## 7. Set the roles and check
+
+Only with a secondary:
 
 ```bash
-claude-use claude-b
+claude-use --secondary claude-b
 ```
+
+Then:
 
 ```bash
 claude-use
 ```
 
-Every account should show, and the chosen one should be marked `★ active`. Then make one test call in any folder:
+It must show each account's role, and `Work goes to:` the secondary (or "this desktop chat itself" with one account). With a secondary, make one test call from a terminal:
 
 ```bash
 claude-ask ~ "Reply with only: OK"
@@ -92,7 +97,8 @@ It must print `OK` and a line like `[claude-b · other · chat …]`.
 
 ## 8. Tell the person
 
-- Start a **new** desktop chat and ask as usual. Say "use claude-a" to switch, "limits" to see use.
+- Start a **new** desktop chat and ask as usual.
+- They change the roles by asking in a desktop chat: "turn off the secondary", "make claude-b the secondary", "swap primary and secondary" (then sign the app in to the new primary), "limits".
 - Watch all accounts with `claude-accounts`, or type `/accounts` in the app.
 - What changed: commands in `~/.local/bin`, settings in `~/.claude-accounts/`, a start-up hook in `~/.claude/settings.json`, and the `account-status` add-on.
 - How to remove it: `~/.claude-tools/tools/multi-account/uninstall.sh`
@@ -111,5 +117,6 @@ It keeps `~/.claude-accounts` (accounts, chats). Delete that only if the person 
 | --- | --- |
 | `command not found: claude-use` | `~/.local/bin` is not on PATH. Tell the person to add it to their shell profile, or call `~/.local/bin/claude-use` directly. |
 | `claude-use` says "not signed in" | Repeat step 6 for that account. |
+| `claude-use` says the app is signed in to another account than the primary | Run the command it suggests (`claude-use --primary <tag>`). |
 | `claude-ask` prints `ERROR` about sign-in | The account's sign-in expired: repeat step 6. |
 | The add-on does not load for an account | `claude update`, then run `claude-accounts-add --sync`. |

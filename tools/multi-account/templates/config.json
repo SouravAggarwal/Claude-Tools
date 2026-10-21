@@ -1,5 +1,6 @@
 {
-  "active": null,
+  "primary": null,
+  "secondary": null,
   "accounts": {},
   "projects": {}
 }

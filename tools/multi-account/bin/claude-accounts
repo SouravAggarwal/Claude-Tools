@@ -14,10 +14,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-HOME = Path.home()
-ROOT = HOME / ".claude-accounts"
-CONFIG = ROOT / "config.json"
-STATUS = ROOT / "status"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import claude_accounts_lib as lib  # noqa: E402
+
+STATUS = lib.STATUS
 
 # Same rules as the add-on (hooks/status.ts): heartbeats come every 20 s.
 GONE_AFTER_S = 3 * 60
@@ -91,9 +91,10 @@ def shorten(text, width):
 
 
 def render(now):
-    config = read_json(CONFIG)
-    if not config or not config.get("accounts"):
-        return ["No accounts set up yet. Add one with:  claude-accounts-add TAG \"LABEL\" [--desktop]"]
+    config = lib.load()
+    if not config["accounts"]:
+        return ["No accounts set up yet. Add one with:  claude-accounts-add TAG EMAIL --primary"]
+    worker = lib.worker(config) or config.get("primary")
     statuses = load_statuses(now)
     width = shutil.get_terminal_size((100, 30)).columns
     lines = [paint("Claude accounts", "1") + dim(f"   {datetime.now().strftime('%H:%M:%S')}   Ctrl+C to quit"), ""]
@@ -101,9 +102,8 @@ def render(now):
     for tag, account in config["accounts"].items():
         mine = [s for s in statuses if s.get("account") == tag]
         readings = sorted((s for s in mine if s.get("rateLimits")), key=lambda s: s["updatedAt"], reverse=True)
-        role = ("desktop app + worker" if account.get("worker") else "desktop app") if account.get("desktopApp") else "worker"
-        active = paint("  ★ active", "1;32") if tag == config.get("active") else ""
-        lines.append(paint(tag, "1;35") + "  " + account.get("label", "") + dim(f"   {role}") + active)
+        working = paint("  ★", "1;32") if tag == worker else ""
+        lines.append(paint(tag, "1;35") + "  " + account.get("email", "") + dim(f"   {lib.role(config, tag)}") + working)
 
         if readings:
             newest = readings[0]

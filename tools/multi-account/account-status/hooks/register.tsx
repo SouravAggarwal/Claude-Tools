@@ -111,10 +111,13 @@ export const register: Register = on => {
     try {
       const home = (await $.env.get('HOME')) ?? ''
       const configDir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${home}/.claude`
+      // The desktop app tells its chats which account it is signed in to.
+      const fromDesktop = (await $.env.get('CLAUDE_CODE_ENTRYPOINT')) === 'claude-desktop'
+      const email = fromDesktop ? ((await $.env.get('CLAUDE_CODE_USER_EMAIL')) ?? '') : ''
       const config = await readConfig($, home)
       live = {
         home,
-        account: accountFor(config, configDir, home),
+        account: accountFor(config, configDir, home, email),
         project: projectFor(config, e.cwd, home),
         cwd: e.cwd,
         startedAt: (await $.session.usage()).startedAt,
@@ -241,7 +244,7 @@ export const register: Register = on => {
                 </Text>
                 <Text dimColor>
                   {' '}
-                  {account.label ?? ''} · {config === null ? '' : roleOf(config, tag)}
+                  {account.email ?? account.label ?? ''} · {config === null ? '' : roleOf(config, tag)}
                 </Text>
               </Text>
               {reading === null ? (

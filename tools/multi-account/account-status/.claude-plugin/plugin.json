@@ -1,6 +1,6 @@
 {
   "name": "account-status",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Reports each session's account, 5-hour and weekly limits, context window and current work to ~/.claude-accounts/status, and shows them all with /accounts.",
   "author": {
     "name": "Sourav Aggarwal",
