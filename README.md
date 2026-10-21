@@ -21,11 +21,13 @@ See where a long job is at a glance. Use several Claude accounts from one chat, 
 
 <table>
   <tr>
+    <th>#</th>
     <th>Tool</th>
     <th>What it does</th>
     <th>You want it when</th>
   </tr>
   <tr>
+    <td rowspan="2" align="center"><b>1</b></td>
     <td>📊 <b><a href="tools/task-progress">Task progress bar</a></b></td>
     <td>Draws a live bar above the prompt box: <code>███████░░░░ 3 of 5 done  Running tests</code>. Turns green when the job is done.</td>
     <td>Claude works through long, many-step jobs and you want to know how far it has got without scrolling.</td>
@@ -38,6 +40,7 @@ See where a long job is at a glance. Use several Claude accounts from one chat, 
     </td>
   </tr>
   <tr>
+    <td rowspan="2" align="center"><b>2</b></td>
     <td>🔀 <b><a href="tools/multi-account">Multi-account</a></b></td>
     <td>Lets you talk in one desktop chat while the work runs on whichever of your Claude accounts is active. Switch any time and the chat carries on, with nothing lost. Shows every account's 5-hour and weekly limits live.</td>
     <td>You have more than one Claude account, each with a small limit, and you are tired of hitting a wall in the middle of a task.</td>
