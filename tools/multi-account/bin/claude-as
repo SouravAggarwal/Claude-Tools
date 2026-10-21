@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Opens Claude Code in this terminal as one of your accounts.
 
-Usage: claude-as TAG [any claude arguments]     for example: claude-as claude-b
-The chat uses that account's own sign-in and the shared chat history, like claude-ask does.
+Usage: claude-as [TAG] [any claude arguments]   for example: claude-as, or claude-as claude-b
+With no TAG it opens the active account (the one claude-use set), so `claude-as` can stand in
+for `claude`. The chat uses that account's own sign-in and the shared chat history.
 """
 import json
 import os
@@ -14,16 +15,19 @@ INHERITED = ("CLAUDE", "ANTHROPIC", "USE_LOCAL_OAUTH", "USE_STAGING_OAUTH")
 
 
 def main():
-    if len(sys.argv) < 2:
-        sys.exit(__doc__)
-    tag = sys.argv[1]
-    account = json.loads(CONFIG.read_text())["accounts"].get(tag)
+    config = json.loads(CONFIG.read_text())
+    named = len(sys.argv) > 1 and sys.argv[1] in config["accounts"]
+    tag = sys.argv[1] if named else config.get("active")
+    rest = sys.argv[2:] if named else sys.argv[1:]
+    if tag is None:
+        sys.exit("claude-as: no active account yet. Pick one with claude-use.")
+    account = config["accounts"].get(tag)
     if account is None:
         sys.exit(f"claude-as: no account {tag!r} in {CONFIG}")
     # Drop any sign-in details inherited from another Claude, so only this account's own is used.
     env = {k: v for k, v in os.environ.items() if not k.startswith(INHERITED)}
     env["CLAUDE_CONFIG_DIR"] = os.path.expanduser(account["configDir"])
-    os.execvpe("claude", ["claude", *sys.argv[2:]], env)
+    os.execvpe("claude", ["claude", *rest], env)
 
 
 if __name__ == "__main__":

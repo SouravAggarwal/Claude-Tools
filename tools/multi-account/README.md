@@ -96,7 +96,8 @@ In the desktop chat, just ask for what you need. These phrases also work:
 | `claude-accounts` | Live view of all accounts and chats. `--once` prints it one time. |
 | `claude-accounts-add TAG "LABEL" [--desktop]` | Sets up an account (folder, shared history, add-ons, settings). |
 | `claude-accounts-add --sync` | Copies the desktop app's start-up hooks and settings to every worker again. |
-| `claude-as TAG` | Opens an interactive Claude chat in the terminal as TAG. |
+| `claude-as` | Opens an interactive Claude chat in the terminal as the active account. Use it instead of `claude`. |
+| `claude-as TAG` | The same, as TAG. |
 | `/accounts` (in the app) | The same live view as `claude-accounts`, as a panel. |
 
 ## The config file
