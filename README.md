@@ -11,7 +11,7 @@ See where a long job is at a glance. Use several Claude accounts from one chat, 
 [![Tools](https://img.shields.io/badge/tools-2-8a63d2)](#-the-tools)
 [![Made on macOS](https://img.shields.io/badge/made%20on-macOS-555)](#-what-you-need)
 
-[The tools](#-the-tools) · [See them](#-see-them) · [Install](#-install) · [Ask your AI to install](#-or-just-ask-your-ai) · [Add your own](#-add-your-own-tool)
+[The tools](#-the-tools) · [Install](#-install) · [Ask your AI to install](#-or-just-ask-your-ai) · [Add your own](#-add-your-own-tool)
 
 </div>
 
@@ -19,26 +19,12 @@ See where a long job is at a glance. Use several Claude accounts from one chat, 
 
 ## ✨ The tools
 
-| | Tool | What it does | You want it when |
-| :-: | --- | --- | --- |
-| 📊 | **[Task progress bar](tools/task-progress)** | Draws a live bar above the prompt box: `███████░░░░ 3 of 5 done  Running tests`. Turns green when the job is done. | Claude works through long, many-step jobs and you want to know how far it has got without scrolling. |
-| 🔀 | **[Multi-account](tools/multi-account)** | Lets you talk in one desktop chat while the work runs on whichever of your Claude accounts is active. Switch any time and the chat carries on, with nothing lost. Shows every account's 5-hour and weekly limits live. | You have more than one Claude account, each with a small limit, and you are tired of hitting a wall in the middle of a task. |
+| Tool | What it does | You want it when | Looks like |
+| --- | --- | --- | :-: |
+| 📊 **[Task progress bar](tools/task-progress)** | Draws a live bar above the prompt box: `███████░░░░ 3 of 5 done  Running tests`. Turns green when the job is done. | Claude works through long, many-step jobs and you want to know how far it has got without scrolling. | <a href="docs/images/progress-bar-terminal.png"><img src="docs/images/progress-bar-terminal.png" alt="The progress bar in a terminal: an orange bar, 3 of 5 done, Running tests, hide" width="340"></a><br>Terminal<br><br><a href="docs/images/progress-bar-desktop.png"><img src="docs/images/progress-bar-desktop.png" alt="The progress bar above the prompt in the Claude desktop app: 3 of 5 done, Running tests" width="340"></a><br>Desktop app |
+| 🔀 **[Multi-account](tools/multi-account)** | Lets you talk in one desktop chat while the work runs on whichever of your Claude accounts is active. Switch any time and the chat carries on, with nothing lost. Shows every account's 5-hour and weekly limits live. | You have more than one Claude account, each with a small limit, and you are tired of hitting a wall in the middle of a task. | <a href="docs/images/accounts-dashboard.png"><img src="docs/images/accounts-dashboard.png" alt="The claude-accounts live view: two accounts with 5-hour and weekly limit bars, the active one marked, and each chat's project, context and current work" width="340"></a><br>`claude-accounts`, or `/accounts` in the app |
 
-Each tool has its own folder with a **README** (for you) and an **AGENT.md** (for your AI agent).
-
-## 👀 See them
-
-> Pictures rendered from each tool's real output, with demo data.
-
-**Task progress bar**, in the terminal and in the desktop app:
-
-<img src="docs/images/progress-bar-terminal.png" alt="The task progress bar in a terminal session: an orange bar, 3 of 5 done, Running tests, hide" width="760">
-
-<img src="docs/images/progress-bar-desktop.png" alt="The task progress bar above the prompt in the Claude desktop app: 3 of 5 done, Running tests" width="680">
-
-**Multi-account**, the `claude-accounts` live view (also inside the app: type `/accounts`):
-
-<img src="docs/images/accounts-dashboard.png" alt="The claude-accounts dashboard: two accounts with 5-hour and weekly limit bars, the active one marked, and each chat's project, context and current work" width="760">
+Each tool has its own folder with a **README** (for you) and an **AGENT.md** (for your AI agent). Pictures are rendered from each tool's real output with demo data; click one to see it full size.
 
 ## 🚀 Install
 
@@ -105,7 +91,7 @@ Claude-Tools/
 ├── AGENTS.md                  ← rules for AI agents working in this repository (CLAUDE.md points here)
 ├── .claude-plugin/
 │   └── marketplace.json       ← lets Claude Code install the add-ons from this repository
-├── docs/images/               ← the pictures above
+├── docs/images/               ← the pictures in the tools table
 └── tools/
     ├── task-progress/         ← 📊 progress bar add-on
     │   ├── README.md          ← for people

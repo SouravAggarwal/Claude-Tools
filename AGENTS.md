@@ -39,7 +39,7 @@ This is a **public** repository of small, generic add-ons and commands for Claud
 1. Make `tools/<tool-name>/` (lower case, words joined by `-`).
 2. Write the code, `install.sh` and `uninstall.sh`, then `README.md` and `AGENT.md`, in the same shape as the existing tools.
 3. If it has an add-on, add it to `.claude-plugin/marketplace.json`, with `"source": "./tools/<tool-name>/<add-on folder>"`, and set `author`, `license` and `homepage` in its `plugin.json`.
-4. Add a row to the tools table in the root `README.md` (what it does, when you want it), and a picture under **See them** if it shows anything on screen.
+4. Add a row to the tools table in the root `README.md`: what it does, when you want it, and a picture in the **Looks like** column if it shows anything on screen.
 5. Run every check below.
 
 ## Changing a tool
