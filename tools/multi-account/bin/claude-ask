@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Sends one message to the active Claude account, working in a project folder, and prints its reply.
+
+The active account is `active` in ~/.claude-accounts/config.json (set it with claude-use). Each
+folder keeps ONE chat that every worker account shares: their chat history folders all point at
+~/.claude-accounts/shared, so after a switch the next account picks up the same chat with
+nothing lost. (It re-reads the whole chat once, which costs that account a bit more.)
+
+Usage: claude-ask [--new] [--account TAG] FOLDER MESSAGE...
+       claude-ask --which FOLDER     prints the account a message would go to, and the project
+  --new      start that folder's chat over
+  --account  use this account for this one message instead of the active one
+Exit code 3: that account is the desktop app's front desk, not a worker.
+"""
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path.home() / ".claude-accounts"
+CONFIG = ROOT / "config.json"
+CHATS = ROOT / "chats"
+# Sign-in and session details of whichever Claude started us; the worker must never see them.
+INHERITED = ("CLAUDE", "ANTHROPIC", "USE_LOCAL_OAUTH", "USE_STAGING_OAUTH")
+HANDED_OVER = (
+    "This request was handed to you by claude-ask: you are the account doing the work. "
+    "Do the work yourself, and never pass it on with claude-ask."
+)
+
+
+def expand(path):
+    return os.path.normpath(os.path.expanduser(path))
+
+
+def project_for(config, folder):
+    best = (None, -1)
+    for name, project in config.get("projects", {}).items():
+        for raw in project.get("folders", []):
+            root = expand(raw)
+            if (folder == root or folder.startswith(root + os.sep)) and len(root) > best[1]:
+                best = (name, len(root))
+    return best[0]
+
+
+def record_context(reply):
+    """Background chats have no live context figure: work it out from the last model call of this run."""
+    calls = (reply.get("usage") or {}).get("iterations") or []
+    windows = [model.get("contextWindow") for model in (reply.get("modelUsage") or {}).values() if model.get("contextWindow")]
+    status_file = ROOT / "status" / f"{reply.get('session_id')}.json"
+    if not calls or not windows or not status_file.exists():
+        return
+    last = calls[-1]
+    tokens = last.get("input_tokens", 0) + last.get("cache_read_input_tokens", 0) + last.get("cache_creation_input_tokens", 0)
+    status = json.loads(status_file.read_text())
+    status["context"] = {"percent": round(tokens * 100 / max(windows)), "tokens": tokens, "window": max(windows)}
+    status_file.write_text(json.dumps(status, indent=2) + "\n")
+
+
+def read_chat(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--new", action="store_true")
+    parser.add_argument("--account")
+    parser.add_argument("--which", action="store_true")
+    parser.add_argument("folder")
+    parser.add_argument("message", nargs="*")
+    args = parser.parse_args()
+
+    config = json.loads(CONFIG.read_text())
+    folder = os.path.abspath(expand(args.folder))
+    if not os.path.isdir(folder):
+        sys.exit(f"claude-ask: no such folder: {folder}")
+    project = project_for(config, folder) or "other"
+    tag = args.account or config.get("active")
+    if tag is None:
+        sys.exit("claude-ask: no active account yet. Add one with claude-accounts-add, then pick it with claude-use.")
+    account = config["accounts"].get(tag)
+    if account is None:
+        sys.exit(f"claude-ask: account {tag!r} is not in {CONFIG}")
+
+    if args.which:
+        print(f"{tag} {project}")
+        return
+    if not args.message:
+        sys.exit("claude-ask: a message is required")
+    if account.get("desktopApp") and not account.get("worker"):
+        print(f"{tag} is the desktop app's front desk, not a worker. Pick a worker with claude-use.", file=sys.stderr)
+        sys.exit(3)
+
+    env = {key: value for key, value in os.environ.items() if not key.startswith(INHERITED)}
+    env["CLAUDE_CONFIG_DIR"] = expand(account["configDir"])
+
+    CHATS.mkdir(parents=True, exist_ok=True)
+    chat_file = CHATS / f"{hashlib.sha1(folder.encode()).hexdigest()[:16]}.json"
+    chat = {} if args.new else read_chat(chat_file)
+    switched = chat.get("account") not in (None, tag)
+
+    command = [
+        "claude", "-p", "--output-format", "json",
+        "--permission-mode", account.get("permissionMode", "auto"),
+        "--append-system-prompt", HANDED_OVER,
+    ]
+    if chat.get("sessionId"):
+        command += ["--resume", chat["sessionId"]]
+    command.append(" ".join(args.message))
+
+    run = subprocess.run(command, cwd=folder, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE)
+    try:
+        reply = json.loads(run.stdout)
+    except ValueError:
+        sys.stdout.write(run.stdout.decode(errors="replace"))
+        sys.exit(run.returncode or 1)
+
+    record_context(reply)
+    if reply.get("session_id"):
+        chat_file.write_text(json.dumps({
+            "folder": folder,
+            "project": project,
+            "sessionId": reply["session_id"],
+            "account": tag,
+            "updatedAt": int(time.time()),
+        }, indent=2) + "\n")
+    print(("ERROR: " if reply.get("is_error") else "") + str(reply.get("result", "")))
+    note = f" · picked up from {chat['account']}" if switched else ""
+    print(f"[{tag} · {project} · chat {str(reply.get('session_id', ''))[:8]}{note}]", file=sys.stderr)
+    sys.exit(1 if reply.get("is_error") else 0)
+
+
+if __name__ == "__main__":
+    main()

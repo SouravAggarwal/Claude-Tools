@@ -1,0 +1,6 @@
+.DS_Store
+__pycache__/
+*.log
+*.tmp
+# Written by Claude Code itself when it loads an add-on from a folder it watches.
+.claude-plugin/types/

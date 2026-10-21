@@ -1,0 +1,17 @@
+{
+  "name": "claude-tools",
+  "description": "Small, sharp add-ons for Claude Code: a live progress bar and multi-account switching with live limits.",
+  "owner": { "name": "Sourav Aggarwal", "url": "https://github.com/SouravAggarwal" },
+  "plugins": [
+    {
+      "name": "task-progress",
+      "source": "./tools/task-progress",
+      "description": "A progress bar above the prompt for Claude's checklist: how many steps are done and which one is running."
+    },
+    {
+      "name": "account-status",
+      "source": "./tools/multi-account/account-status",
+      "description": "Part of multi-account: reports each chat's account, 5-hour and weekly limits, context and current work; /accounts shows them all."
+    }
+  ]
+}

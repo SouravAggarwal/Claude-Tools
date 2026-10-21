@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Adds a Claude account as a worker, ready for claude-use and claude-ask.
+
+Usage: claude-accounts-add TAG "LABEL" [--desktop]
+       claude-accounts-add --sync          re-applies the shared setup to every worker
+  TAG        a short name, for example claude-a or work
+  LABEL      anything that helps you recognise it, for example the account's email
+  --desktop  this is the account the Claude desktop app is signed in to
+
+What it does for TAG:
+  1. makes the account's own Claude folder, ~/.claude-accounts/homes/TAG, so its sign-in stays apart;
+  2. points its chat history folders at ~/.claude-accounts/shared, so every account shares every chat;
+  3. gives it the desktop app's start-up hooks and env settings (minus the front-desk rule), the
+     account-status add-on, and any other Claude Tools add-on the desktop app has turned on;
+  4. adds it to ~/.claude-accounts/config.json (the first worker becomes the active one).
+Then sign it in:  CLAUDE_CONFIG_DIR=~/.claude-accounts/homes/TAG claude auth login
+"""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+ROOT = HOME / ".claude-accounts"
+CONFIG = ROOT / "config.json"
+SHARED = ROOT / "shared"
+SHARED_DIRS = ("projects", "tasks", "todos", "plans", "file-history")
+DESKTOP_DIR = HOME / ".claude"
+MARKETPLACE = "claude-tools"
+REPO = Path(__file__).resolve().parents[3]  # this file lives in <repo>/tools/multi-account/bin
+FRONT_DESK_RULE = "front-desk-rule.md"
+INHERITED = ("CLAUDE", "ANTHROPIC", "USE_LOCAL_OAUTH", "USE_STAGING_OAUTH")
+
+
+def expand(path):
+    return Path(os.path.expanduser(path))
+
+
+def claude(config_dir, *args):
+    env = {k: v for k, v in os.environ.items() if not k.startswith(INHERITED)}
+    env["CLAUDE_CONFIG_DIR"] = str(config_dir)
+    return subprocess.run(["claude", *args], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+
+def desktop_settings():
+    path = DESKTOP_DIR / "settings.json"
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
+def set_up(config_dir):
+    config_dir.mkdir(parents=True, exist_ok=True)
+    for name in SHARED_DIRS:
+        (SHARED / name).mkdir(parents=True, exist_ok=True)
+        link = config_dir / name
+        if not link.exists() and not link.is_symlink():
+            link.symlink_to(SHARED / name)
+        elif not link.is_symlink():
+            print(f"  note: {link} is a real folder, not shared; move its contents to {SHARED / name} and link it")
+
+    desk = desktop_settings()
+    starts = [
+        group for group in desk.get("hooks", {}).get("SessionStart", [])
+        if not any(FRONT_DESK_RULE in hook.get("command", "") for hook in group.get("hooks", []))
+    ]
+    settings_file = config_dir / "settings.json"
+    settings = json.loads(settings_file.read_text()) if settings_file.exists() else {}
+    settings["env"] = {**settings.get("env", {}), **desk.get("env", {})}
+    settings.setdefault("hooks", {})["SessionStart"] = starts
+    settings_file.write_text(json.dumps(settings, indent=2) + "\n")
+
+    source = str(REPO) if (REPO / ".claude-plugin" / "marketplace.json").exists() else "SouravAggarwal/Claude-Tools"
+    claude(config_dir, "plugin", "marketplace", "add", source)
+    wanted = {"account-status"} | {
+        key.split("@")[0] for key, on in desk.get("enabledPlugins", {}).items() if on and key.endswith(f"@{MARKETPLACE}")
+    }
+    for plugin in sorted(wanted):
+        result = claude(config_dir, "plugin", "install", f"{plugin}@{MARKETPLACE}", "--scope", "user")
+        print("  " + (result.stdout.strip().splitlines() or ["?"])[-1])
+
+
+def main():
+    config = json.loads(CONFIG.read_text()) if CONFIG.exists() else {"active": None, "accounts": {}, "projects": {}}
+    args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+    flags = {arg for arg in sys.argv[1:] if arg.startswith("--")}
+
+    if "--sync" in flags:
+        for tag, account in config["accounts"].items():
+            if account.get("worker", True):
+                print(f"{tag}:")
+                set_up(expand(account["configDir"]))
+        return
+    if not args:
+        sys.exit(__doc__)
+
+    tag, label = args[0], (args[1] if len(args) > 1 else args[0])
+    account = config["accounts"].get(tag) or {
+        "label": label,
+        "configDir": f"~/.claude-accounts/homes/{tag}",
+        "worker": True,
+        # The same safety as a desktop chat: a checker lets safe commands run and blocks risky ones.
+        "permissionMode": "auto",
+    }
+    if "--desktop" in flags:
+        for other in config["accounts"].values():
+            other.pop("desktopApp", None)
+            other.pop("desktopConfigDir", None)
+        account.update(desktopApp=True, desktopConfigDir="~/.claude")
+    config["accounts"][tag] = account
+    config["active"] = config.get("active") or tag
+
+    print(f"{tag}:")
+    set_up(expand(account["configDir"]))
+    ROOT.mkdir(parents=True, exist_ok=True)
+    CONFIG.write_text(json.dumps(config, indent=2) + "\n")
+
+    signed_in = '"loggedIn": true' in claude(expand(account["configDir"]), "auth", "status").stdout
+    print(f"{tag} is set up." + ("" if signed_in else f"\nSign it in:  CLAUDE_CONFIG_DIR={account['configDir']} claude auth login"))
+
+
+if __name__ == "__main__":
+    main()

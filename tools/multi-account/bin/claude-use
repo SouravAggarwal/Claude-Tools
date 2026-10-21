@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+"""Shows the Claude accounts and switches the active one (the account claude-ask sends work to).
+
+Usage: claude-use            lists the accounts: active one, sign-in, 5-hour and weekly use
+       claude-use TAG        makes TAG the active account (after checking it is signed in)
+       claude-use --best     makes the signed-in worker with the most room left the active one
+A switch loses nothing: every worker shares one chat history, so the next message picks up the
+same chat on the new account.
+"""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path.home() / ".claude-accounts"
+CONFIG = ROOT / "config.json"
+STATUS = ROOT / "status"
+INHERITED = ("CLAUDE", "ANTHROPIC", "USE_LOCAL_OAUTH", "USE_STAGING_OAUTH")
+
+
+def expand(path):
+    return os.path.normpath(os.path.expanduser(path))
+
+
+def is_worker(account):
+    return not account.get("desktopApp") or account.get("worker", False)
+
+
+def signed_in(account):
+    if account.get("desktopApp") and not account.get("worker"):
+        return True  # the desktop app holds its own sign-in
+    env = {k: v for k, v in os.environ.items() if not k.startswith(INHERITED)}
+    env["CLAUDE_CONFIG_DIR"] = expand(account["configDir"])
+    run = subprocess.run(["claude", "auth", "status"], env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    try:
+        return bool(json.loads(run.stdout).get("loggedIn"))
+    except ValueError:
+        return False
+
+
+def latest_limits():
+    """Freshest 5-hour and weekly reading per account, from what the account-status add-on wrote."""
+    best = {}
+    for path in STATUS.glob("*.json"):
+        try:
+            status = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        tag = status.get("account")
+        if status.get("rateLimits") and (tag not in best or status["updatedAt"] > best[tag]["updatedAt"]):
+            best[tag] = status
+    return {tag: {lim["kind"]: lim["percentUsed"] for lim in s["rateLimits"]} for tag, s in best.items()}
+
+
+def describe(limits):
+    if not limits:
+        return "no reading yet"
+    return f"5h {round(limits.get('five_hour', 0))}% · week {round(limits.get('seven_day', 0))}%"
+
+
+def main():
+    config = json.loads(CONFIG.read_text())
+    accounts = config["accounts"]
+    limits = latest_limits()
+    arg = sys.argv[1] if len(sys.argv) > 1 else None
+
+    if arg in (None, "--list"):
+        for tag, account in accounts.items():
+            mark = "★ active" if tag == config.get("active") else ("desktop app only" if not is_worker(account) else "")
+            print(f"{tag:<10} {account.get('label', ''):<32} {describe(limits.get(tag)):<22} {mark}")
+        return
+
+    if arg == "--best":
+        workers = [t for t, a in accounts.items() if is_worker(a)]
+        ranked = sorted(workers, key=lambda t: max(limits.get(t, {}).values(), default=0))
+        arg = next((t for t in ranked if signed_in(accounts[t])), None)
+        if arg is None:
+            sys.exit("claude-use: no signed-in worker account")
+
+    account = accounts.get(arg)
+    if account is None:
+        sys.exit(f"claude-use: no account {arg!r}. Known: {', '.join(accounts)}")
+    if not is_worker(account):
+        sys.exit(f"claude-use: {arg} is the desktop app's front desk, not a worker")
+    if not signed_in(account):
+        sys.exit(f"claude-use: {arg} is not signed in. Run: CLAUDE_CONFIG_DIR={account['configDir']} claude auth login")
+
+    previous = config.get("active")
+    config["active"] = arg
+    CONFIG.write_text(json.dumps(config, indent=2) + "\n")
+    print(f"Active account: {arg} ({account.get('label', '')}), {describe(limits.get(arg))}. Was {previous}.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""Live view of every Claude account on this Mac: 5-hour and weekly limits, and each session's
+context window and current work. Reads what the account-status add-on writes to
+~/.claude-accounts/status (the /accounts pane inside Claude shows the same).
+
+Usage: claude-accounts           refreshes every 2 seconds, Ctrl+C to quit
+       claude-accounts --once    prints once
+"""
+import json
+import os
+import shutil
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+HOME = Path.home()
+ROOT = HOME / ".claude-accounts"
+CONFIG = ROOT / "config.json"
+STATUS = ROOT / "status"
+
+# Same rules as the add-on (hooks/status.ts): heartbeats come every 20 s.
+GONE_AFTER_S = 3 * 60
+ENDED_SHOWN_S = 15 * 60
+PRUNE_AFTER_S = 3 * 24 * 3600
+
+COLOR = sys.stdout.isatty() or os.environ.get("FORCE_COLOR") == "1"
+
+
+def paint(text, code):
+    return f"\033[{code}m{text}\033[0m" if COLOR else text
+
+
+def dim(text):
+    return paint(text, "2")
+
+
+def level(percent):
+    return "31" if percent >= 80 else "33" if percent >= 50 else "32"
+
+
+def bar(percent, width=20):
+    filled = max(0, min(width, round(percent / 100 * width)))
+    return paint("█" * filled, level(percent)) + dim("░" * (width - filled))
+
+
+def read_json(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def load_statuses(now):
+    statuses = []
+    for path in STATUS.glob("*.json"):
+        try:
+            if now - path.stat().st_mtime > PRUNE_AFTER_S:
+                path.unlink()
+                continue
+        except OSError:
+            continue
+        status = read_json(path)
+        if isinstance(status, dict) and status.get("version") == 1:
+            statuses.append(status)
+    return statuses
+
+
+def is_shown(status, now):
+    age = now - status["updatedAt"] / 1000
+    return age < ENDED_SHOWN_S if status["state"] == "ended" else age < GONE_AFTER_S
+
+
+def ago(seconds):
+    minutes = round(seconds / 60)
+    return "just now" if minutes < 1 else f"{minutes}m ago" if minutes < 60 else f"{round(minutes / 60)}h ago"
+
+
+def resets(iso, now):
+    if not iso:
+        return ""
+    at = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    minutes = max(0, round((at.timestamp() - now) / 60))
+    days, hours, mins = minutes // 1440, minutes % 1440 // 60, minutes % 60
+    left = f"{days}d {hours}h" if days else f"{hours}h {mins}m"
+    return f"resets in {left} ({at.astimezone().strftime('%a %H:%M')})"
+
+
+def shorten(text, width):
+    return text if len(text) <= width else text[: max(0, width - 1)] + "…"
+
+
+def render(now):
+    config = read_json(CONFIG)
+    if not config or not config.get("accounts"):
+        return ["No accounts set up yet. Add one with:  claude-accounts-add TAG \"LABEL\" [--desktop]"]
+    statuses = load_statuses(now)
+    width = shutil.get_terminal_size((100, 30)).columns
+    lines = [paint("Claude accounts", "1") + dim(f"   {datetime.now().strftime('%H:%M:%S')}   Ctrl+C to quit"), ""]
+
+    for tag, account in config["accounts"].items():
+        mine = [s for s in statuses if s.get("account") == tag]
+        readings = sorted((s for s in mine if s.get("rateLimits")), key=lambda s: s["updatedAt"], reverse=True)
+        role = ("desktop app + worker" if account.get("worker") else "desktop app") if account.get("desktopApp") else "worker"
+        active = paint("  ★ active", "1;32") if tag == config.get("active") else ""
+        lines.append(paint(tag, "1;35") + "  " + account.get("label", "") + dim(f"   {role}") + active)
+
+        if readings:
+            newest = readings[0]
+            for limit in newest["rateLimits"]:
+                name = {"five_hour": "5 hours", "seven_day": "week   "}.get(limit["kind"], limit["kind"])
+                used = limit["percentUsed"]
+                lines.append(f"  {name} {bar(used)} {paint(f'{round(used):>3}%', level(used))}  {dim(resets(limit.get('resetsAt'), now))}")
+            lines.append(dim(f"  limits as of {ago(now - newest['updatedAt'] / 1000)}"))
+        else:
+            lines.append(dim("  limits: no reading yet (shows after this account's next message)"))
+
+        shown = sorted((s for s in mine if is_shown(s, now)), key=lambda s: s["updatedAt"], reverse=True)
+        if not shown:
+            lines.append(dim("  no session running"))
+        for s in shown:
+            state = s["state"]
+            dot = paint("●", "32") if state == "working" else dim("○")
+            when = f"ended {ago(now - s['updatedAt'] / 1000)}" if state == "ended" else state
+            ctx = s["context"].get("percent")
+            head = f"  {dot} {s.get('project') or 'other'} · {Path(s['cwd']).name} · {s['kind']} · {when}"
+            lines.append(f"{head} · context " + (dim("n/a") if ctx is None else paint(f"{ctx}%", level(ctx))))
+            doing = s.get("task") or s.get("lastPrompt") or "waiting for a prompt"
+            if s.get("activity"):
+                doing = f"{doing}  ({s['activity']})"
+            lines.append(dim("      " + shorten(doing, width - 7)))
+        lines.append("")
+    return lines
+
+
+def main():
+    if "--once" in sys.argv:
+        print("\n".join(render(time.time())))
+        return
+    sys.stdout.write("\033[?25l")
+    try:
+        while True:
+            frame = "\n".join(render(time.time()))
+            sys.stdout.write("\033[H\033[2J" + frame + "\n")
+            sys.stdout.flush()
+            time.sleep(2)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        sys.stdout.write("\033[?25h\n")
+
+
+if __name__ == "__main__":
+    main()
