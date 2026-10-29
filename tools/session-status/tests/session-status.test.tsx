@@ -20,10 +20,29 @@ type World = {
   stateWhileAsking: string | null
   /** The session server refuses every call. */
   refuses: boolean
+  /** The app refuses renames (the person pressed Deny); get_session still answers. */
+  deniesRename: boolean
+  /** Every set_session_title call made, refused ones too. */
+  renameCalls: number
 }
 
 function world(over: Partial<World> = {}): World {
-  return { files: new Map(), title: 'Fix the login page', renames: [], mcpCalls: 0, opened: [], stateWhileAsking: null, refuses: false, ...over }
+  return { files: new Map(), title: 'Fix the login page', renames: [], mcpCalls: 0, opened: [], stateWhileAsking: null, refuses: false, deniesRename: false, renameCalls: 0, ...over }
+}
+
+// A desktop chat's environment, with what the app's record of the chat needs.
+const APP = `${HOME}/Library/Application Support/Claude`
+const DESKTOP_ENV = {
+  HOME,
+  CLAUDE_CODE_HOST_SESSION_ID: HOST_ID,
+  CLAUDE_CODE_EXECPATH: `${APP}/claude-code/2.1.309/claude`,
+  CLAUDE_CODE_ACCOUNT_UUID: 'acct-0001',
+  CLAUDE_CODE_ORGANIZATION_UUID: 'org-0001',
+}
+const RECORD = `${APP}/claude-code-sessions/acct-0001/org-0001/${HOST_ID}.json`
+
+function record(titleSource: string | undefined): string {
+  return JSON.stringify({ sessionId: HOST_ID, title: 'whatever', ...(titleSource ? { titleSource } : {}), mcpConfig: {} })
 }
 
 function status(w: World): StatusFile | undefined {
@@ -67,6 +86,8 @@ function engine(on: On, w: World, env: Record<string, string> = { HOME, CLAUDE_C
     if (e.tool === 'get_session') {
       return { value: { content: [{ type: 'text', text: JSON.stringify({ id: HOST_ID, title: w.title }) }], isError: false } }
     }
+    w.renameCalls += 1
+    if (w.deniesRename) return { value: { content: [{ type: 'text', text: 'The user denied the rename' }], isError: true } }
     w.title = String(e.args.title)
     w.renames.push(w.title)
 
@@ -362,14 +383,92 @@ describe('the sidebar title', () => {
     expect(status(w)?.title).toBe('Fix the login page')
   })
 
-  test('keeps a title the person changed in the sidebar', async ($, on) => {
+  test('with no record, a title someone else changed is left alone', async ($, on) => {
     const w = world()
     engine(on, w)
     await begin($)
     await startTurn($)
+    expect(status(w)?.lastWrittenTitle).toBe('⏳ Fix the login page')
     w.title = 'Login fix, take two'
     await endTurn($)
-    expect(w.title).toBe('✅ Login fix, take two')
+    expect(w.title).toBe('Login fix, take two')
+    expect(w.renameCalls).toBe(1)
+  })
+
+  test('never renames a chat the person named, and keeps a marker in their name as text', async ($, on) => {
+    const w = world({ title: '⏳ 2/5 city url' })
+    w.files.set(RECORD, record('user'))
+    engine(on, w, DESKTOP_ENV)
+    await begin($)
+    await startTurn($)
+    await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: PLAN })
+    await endTurn($)
+    expect(w.renameCalls).toBe(0)
+    expect(w.title).toBe('⏳ 2/5 city url')
+    expect(status(w)).toMatchObject({ state: 'needs-you', title: '⏳ 2/5 city url' })
+  })
+
+  for (const source of ['auto', 'tool', undefined]) {
+    test(`renames a chat the app or Claude named (${source ?? 'no titleSource'})`, async ($, on) => {
+      const w = world({ title: 'Named elsewhere' })
+      w.files.set(RECORD, record(source))
+      engine(on, w, DESKTOP_ENV)
+      await begin($)
+      await startTurn($)
+      await endTurn($)
+      expect(w.renames).toEqual(['⏳ Named elsewhere', '✅ Named elsewhere'])
+    })
+  }
+
+  test('markers come back once the chat is no longer named by the person', async ($, on) => {
+    const w = world({ title: 'My name' })
+    w.files.set(RECORD, record('user'))
+    engine(on, w, DESKTOP_ENV)
+    await begin($)
+    await startTurn($)
+    expect(w.renameCalls).toBe(0)
+    w.files.set(RECORD, record('tool'))
+    w.title = 'Claude named it'
+    await endTurn($)
+    expect(w.renames).toEqual(['✅ Claude named it'])
+  })
+
+  test('after one refused rename it never asks again in that chat', async ($, on) => {
+    const w = world({ deniesRename: true })
+    engine(on, w, DESKTOP_ENV)
+    await begin($)
+    await startTurn($)
+    await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: PLAN })
+    await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', advance: true })
+    await endTurn($)
+    expect(w.renameCalls).toBe(1)
+    const calls = w.mcpCalls
+    await startTurn($)
+    await endTurn($)
+    expect(w.mcpCalls).toBe(calls)
+    expect(status(w)?.state).toBe('needs-you')
+  })
+
+  test('a reload remembers the title it last wrote', async ($, on) => {
+    const w = world({ title: '💬 1/3 Fix the login page' })
+    w.files.set(FILE, JSON.stringify({ version: 1, lastWrittenTitle: '💬 1/3 Fix the login page' }))
+    engine(on, w)
+    await begin($)
+    await startTurn($)
+    // Idle at the start takes the old marker away; the new turn puts its own.
+    expect(w.renames).toEqual(['Fix the login page', '⏳ Fix the login page'])
+    expect(status(w)?.lastWrittenTitle).toBe('⏳ Fix the login page')
+  })
+
+  test('after a reload, a title it did not write last is left alone', async ($, on) => {
+    const w = world({ title: 'Renamed by hand' })
+    w.files.set(FILE, JSON.stringify({ version: 1, lastWrittenTitle: '💬 1/3 Fix the login page' }))
+    engine(on, w)
+    await begin($)
+    await startTurn($)
+    await endTurn($)
+    expect(w.renameCalls).toBe(0)
+    expect(status(w)?.lastWrittenTitle).toBe('💬 1/3 Fix the login page')
   })
 
   test('waits for the app to name a new chat', async ($, on) => {

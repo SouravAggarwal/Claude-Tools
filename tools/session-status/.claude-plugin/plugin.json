@@ -1,6 +1,6 @@
 {
   "name": "session-status",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Shows which sessions are working, need you, or are done: a marker in the desktop app's sidebar title and a /sessions board. No alerts.",
   "author": {
     "name": "Sourav Aggarwal",

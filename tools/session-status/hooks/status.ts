@@ -66,6 +66,8 @@ export type StatusFile = {
   updatedAt: number
   /** The session's process said goodbye. */
   ended: boolean
+  /** The last whole title this add-on wrote to the sidebar, so a reload knows it; absent in older files. */
+  lastWrittenTitle?: string | null
 }
 
 export const STATUS_DIR = '.claude-session-status'
@@ -121,6 +123,54 @@ export function withMarker(title: string, label: string): string {
   const base = stripMarker(title)
 
   return label === '' ? base : `${label} ${base}`
+}
+
+// ── Whose name the chat has ─────────────────────────────────────────────────
+
+/** Who named the chat, from the app's own record of it: the person, someone else, or unknown (no record). */
+export type TitleSource = 'user' | 'other' | 'unknown'
+
+export type RecordEnv = {
+  execPath: string | undefined
+  accountId: string | undefined
+  organizationId: string | undefined
+  hostSessionId: string | undefined
+}
+
+// The desktop app keeps each chat's record at
+// <app data>/claude-code-sessions/<account>/<organization>/<host session>.json, and its data folder is where
+// it keeps Claude Code (`CLAUDE_CODE_EXECPATH`), cut before "/claude-code/". Only plain ids are used.
+export function recordPath(env: RecordEnv): string | null {
+  const { execPath, accountId, organizationId, hostSessionId } = env
+  const cut = execPath?.indexOf('/claude-code/') ?? -1
+  const plain = (id: string | undefined): id is string => typeof id === 'string' && /^[\w-]+$/.test(id)
+
+  if (!execPath || cut <= 0 || !plain(accountId) || !plain(organizationId) || !plain(hostSessionId)) return null
+
+  return `${execPath.slice(0, cut)}/claude-code-sessions/${accountId}/${organizationId}/${hostSessionId}.json`
+}
+
+// Reads only `titleSource` from the record: "user" when the person named the chat. Anything else in the
+// record is left alone. Text that is not a JSON object is unknown.
+export function titleSourceOf(text: string): TitleSource {
+  try {
+    const record = JSON.parse(text) as unknown
+    if (typeof record !== 'object' || record === null || Array.isArray(record)) return 'unknown'
+
+    return (record as { titleSource?: unknown }).titleSource === 'user' ? 'user' : 'other'
+  } catch {
+    return 'unknown'
+  }
+}
+
+// The app asks the person before renaming a chat they named, and no setting can answer for them, so a
+// chat they named is never renamed. Without the record, only a title this add-on wrote last (or a chat it
+// never wrote) is renamed: any other title means someone renamed it.
+export function mayRename(source: TitleSource, current: string, lastWritten: string | null): boolean {
+  if (source === 'user') return false
+  if (source === 'other') return true
+
+  return lastWritten === null || current === lastWritten
 }
 
 // get_session's answer, read defensively: structured content first, then JSON in a text block.

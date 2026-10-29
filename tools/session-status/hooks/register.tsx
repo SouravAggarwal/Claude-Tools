@@ -15,23 +15,27 @@ import {
   fileNameFor,
   markerLabel,
   markerSetOf,
+  mayRename,
   openArgv,
   projectOf,
+  recordPath,
   shorten,
   stripMarker,
   svgBar,
   svgDot,
   textBar,
   titleFromSession,
+  titleSourceOf,
   withMarker,
 } from './status'
-import type { BoardRow, Facts, MarkerSet, State, StatusFile } from './status'
+import type { BoardRow, Facts, MarkerSet, State, StatusFile, TitleSource } from './status'
 
 const PANE = 'sessions'
 const HEARTBEAT_MS = 30_000
 const BOARD_REFRESH_MS = 3_000
 // The desktop app's own MCP server, which names its chats in the sidebar.
 const SESSIONS_SERVER = 'ccd_session_mgmt'
+// get_session may fail while the app starts; a refused rename stops renaming at once.
 const TITLE_FAILURES_ALLOWED = 3
 // How long a hook waits for the sidebar rename before it lets the session go on.
 const TITLE_WAIT_MS = 1_500
@@ -58,7 +62,16 @@ let markers: MarkerSet = 'A'
 const loops = new Set<string>()
 /** Background work started and not yet heard to finish: agents, shells, monitors, workflows. */
 let background = new Set<string>()
-const titles = { isOn: false, failures: 0, applied: null as string | null, base: null as string | null }
+const titles = {
+  isOn: false,
+  failures: 0,
+  applied: null as string | null,
+  base: null as string | null,
+  /** The whole title this add-on last wrote; kept in the status file across reloads. */
+  lastWritten: null as string | null,
+  /** The app's own record of this chat, read only for who named it. */
+  record: null as string | null,
+}
 let titleQueue: Promise<void> = Promise.resolve()
 let refresh: { cancel: () => void } | null = null
 let pulse = false
@@ -116,6 +129,18 @@ async function readAccount($: EngineInterface, home: string, sessionId: string):
   }
 }
 
+// The title this add-on last wrote for this chat, from its status file, so a reload remembers it.
+async function readLastWritten($: EngineInterface, session: Live): Promise<string | null> {
+  try {
+    const path = `${session.home}/${STATUS_DIR}/${fileNameFor(session.sessionId, session.hostSessionId)}`
+    const status = JSON.parse(await $.fs.read(path)) as { lastWrittenTitle?: unknown }
+
+    return typeof status.lastWrittenTitle === 'string' ? status.lastWrittenTitle : null
+  } catch {
+    return null
+  }
+}
+
 async function readStatuses($: EngineInterface, home: string): Promise<StatusFile[]> {
   const dir = `${home}/${STATUS_DIR}`
   const entries = await $.fs.list(dir).catch(() => [])
@@ -133,32 +158,58 @@ async function readStatuses($: EngineInterface, home: string): Promise<StatusFil
   return statuses.filter((status): status is StatusFile => status !== null && status.version === 1)
 }
 
-// Puts the marker in front of the chat's title in the desktop app's sidebar, only when it changed.
+async function readTitleSource($: EngineInterface): Promise<TitleSource> {
+  if (titles.record === null) return 'unknown'
+  try {
+    return titleSourceOf(await $.fs.read(titles.record))
+  } catch {
+    // Missing, too big, or another layout: fall back to the last title this add-on wrote.
+    return 'unknown'
+  }
+}
+
+// Puts the marker in front of the chat's title in the desktop app's sidebar, only when it changed, and
+// never in a chat the person named: the app would ask them to approve every rename.
 async function syncTitle($: EngineInterface): Promise<void> {
   if (live === null || !titles.isOn) return
   const label = markerLabel(markers, live.state, progressOf(live.steps))
   if (label === titles.applied) return
 
+  let current: string | null
   try {
     const read = await $.mcp.call(SESSIONS_SERVER, 'get_session', { session_id: 'self' })
-    const current = read.isError ? null : titleFromSession(read)
     if (read.isError) throw new Error('get_session refused')
-    // No title yet: leave the app to name the chat first; the next change or heartbeat tries again.
-    if (current === null || stripMarker(current).trim() === '') return
-
-    const next = withMarker(current, label)
-    if (next !== current) {
-      const written = await $.mcp.call(SESSIONS_SERVER, 'set_session_title', { session_id: 'self', title: next })
-      if (written.isError) throw new Error('set_session_title refused')
-    }
-    titles.applied = label
-    titles.base = stripMarker(current)
-    titles.failures = 0
+    current = titleFromSession(read)
   } catch {
-    // No such server (a terminal), or the call was refused: try a few times, then stay quiet.
+    // No such server (a terminal), or the app is not ready: try a few times, then stay quiet.
     titles.failures += 1
     if (titles.failures >= TITLE_FAILURES_ALLOWED) titles.isOn = false
+    return
   }
+  titles.failures = 0
+  // No title yet: leave the app to name the chat first; the next change or heartbeat tries again.
+  if (current === null || stripMarker(current).trim() === '') return
+
+  const next = withMarker(current, label)
+  if (next !== current) {
+    if (!mayRename(await readTitleSource($), current, titles.lastWritten)) {
+      // The person's own name stays exactly as they wrote it; check again when the marker next changes.
+      titles.applied = label
+      titles.base = current
+      return
+    }
+    try {
+      const written = await $.mcp.call(SESSIONS_SERVER, 'set_session_title', { session_id: 'self', title: next })
+      if (written.isError) throw new Error('set_session_title refused')
+    } catch {
+      // Refused (a Deny, say): never ask again in this chat.
+      titles.isOn = false
+      return
+    }
+    titles.lastWritten = next
+  }
+  titles.applied = label
+  titles.base = stripMarker(current)
 }
 
 function queueTitle($: EngineInterface): Promise<void> {
@@ -177,6 +228,9 @@ async function publish($: EngineInterface): Promise<void> {
       live.state = verdict.state
       live.stateSince = now
     }
+    // The sidebar first, so the file holds the title just written. Bounded: a slow or missing title server
+    // never holds up a tool call or a turn for long.
+    await Promise.race([queueTitle($), $.clock.sleep(TITLE_WAIT_MS).catch(() => undefined)])
     const status: StatusFile = {
       version: 1,
       sessionId: live.sessionId,
@@ -186,6 +240,7 @@ async function publish($: EngineInterface): Promise<void> {
       helpersRunning: helperCount(),
       waitingReason: verdict.waitingReason,
       title: titles.base,
+      lastWrittenTitle: titles.lastWritten,
       cwd: live.cwd,
       project: projectOf(live.cwd),
       account: await readAccount($, live.home, live.sessionId),
@@ -200,8 +255,6 @@ async function publish($: EngineInterface): Promise<void> {
   } catch {
     // Reporting must never get in the way of the session's own work.
   }
-  // Bounded: a slow or missing title server never holds up a tool call or a turn for long.
-  await Promise.race([queueTitle($), $.clock.sleep(TITLE_WAIT_MS).catch(() => undefined)])
 }
 
 function changeFacts($: EngineInterface, change: (facts: Live['facts']) => Partial<Live['facts']>): Promise<void> {
@@ -227,9 +280,12 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const answer = await next(e)
     try {
-      const [home, hostSessionId, sessionId, now] = await Promise.all([
+      const [home, hostSessionId, execPath, accountId, organizationId, sessionId, now] = await Promise.all([
         $.env.get('HOME'),
         $.env.get('CLAUDE_CODE_HOST_SESSION_ID'),
+        $.env.get('CLAUDE_CODE_EXECPATH'),
+        $.env.get('CLAUDE_CODE_ACCOUNT_UUID'),
+        $.env.get('CLAUDE_CODE_ORGANIZATION_UUID'),
         $.session.id(),
         $.clock.now(),
       ])
@@ -246,6 +302,8 @@ export const register: Register = (on, options) => {
       }
       // Only a chat the desktop app hosts has a sidebar title to mark.
       titles.isOn = live.hostSessionId !== null
+      titles.record = recordPath({ execPath, accountId, organizationId, hostSessionId })
+      titles.lastWritten = await readLastWritten($, live)
       await $.command.register({
         name: 'sessions',
         description: 'Show every session: which are working, which need you, which are done',

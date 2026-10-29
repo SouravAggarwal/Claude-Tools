@@ -39,7 +39,8 @@ One rule decides the state. It checks these in order and takes the first that fi
 - An add-on watches the session's turns and tool calls. It never changes them.
 - Each session writes one small file to `~/.claude-session-status/`: its state, steps, helpers, title, folder, and account. It works without any other tool installed.
 - If [multi-account](../multi-account) reports the same session, the board shows that session's account.
-- **Sidebar marker (desktop app only):** the add-on renames the chat through the app's own session server (`ccd_session_mgmt`). It keeps your title and only swaps the marker in front. It renames only when the marker or the count changes. It waits for the app to name a new chat first. In the terminal, or if the app refuses, it does nothing.
+- **Sidebar marker (desktop app only):** the add-on renames the chat through the app's own session server (`ccd_session_mgmt`). It keeps your title and only swaps the marker in front. It renames only when the marker or the count changes. It waits for the app to name a new chat first. In the terminal it does nothing, and if the app ever refuses a rename, it stops renaming that chat.
+- **A chat you rename keeps your name exactly** and shows no marker. The app would ask you to approve every rename of a name you gave, so the add-on never renames it. To know who named the chat, it reads one field (`titleSource`) from the app's own record of the chat, and nothing else. If it cannot read that record, it only renames a title that is exactly the one it wrote last.
 - **Board:** `/sessions` opens a pane beside the chat. It refreshes every 3 seconds. Click a chat's title to open that chat in the desktop app (macOS `open`).
 
 ## Install
@@ -83,7 +84,10 @@ The installer sets `A` the first time and never changes your pick after that. Pi
 | `C` | 🔵 | 🟡 | 🟢 | 🔴 |
 | `off` | no marker; an old one is taken away | | | |
 
-**A chat you named yourself** may ask you to approve each rename (not tested yet). If you see an approval card every time the marker changes, turn markers off: pick `off` in `/config`, or run `claude plugin install session-status@claude-tools --scope user --config markers=off`. The board keeps working without markers.
+**A chat you rename** keeps your name exactly and shows no marker. The `/sessions` board still shows its state.
+
+- Markers come back only if Claude renames the chat later.
+- A marker you keep inside your own name (say `⏳ 2/5 city url`) stays as plain text. It is not updated.
 
 ## Remove
 
@@ -106,7 +110,7 @@ Then type `/reload-plugins` in an open chat, or start a new one.
 
 | Problem | Fix |
 | --- | --- |
-| An approval card on every rename | The chat has a title you gave it. Turn markers off (see [Options](#options)). |
+| A chat you renamed shows no marker | That is on purpose: your name stays as you wrote it. See its state on the `/sessions` board. |
 | No marker in the sidebar | Markers only work in the desktop app. Check that the option is not `off`. A brand-new chat gets its marker once the app has named it. |
 | A chat says **working** but looks quiet | Something it started is still running (a helper agent or a background command). The board says how many. |
 | A row says "Not running" | That session stopped sending updates for over 2 minutes while working: its process has gone. |
@@ -121,9 +125,9 @@ In a real desktop app chat on macOS (2026-10-29):
 - A background command counted as 1 helper and kept the chat **working**. It dropped to 0 once its finish notice arrived. A notice that lands while Claude is replying is counted at the chat's next step.
 - `/sessions` opened the board, and it looked right.
 
-Not yet tried: a chat you named yourself (see [Options](#options)), and opening a chat by clicking its title on the board.
+In that test, renaming a chat by hand made the app ask to approve each later rename. Version 1.0.2 fixes this by never renaming a chat you named; that fix has automated tests, but has **not yet been tried in the app**. Also not yet tried: opening a chat by clicking its title on the board.
 
-Also 31 automated tests, with stand-ins for the engine, the files, the app's session server and `open`, on the terminal and desktop surfaces: `claude plugin test tools/session-status`.
+Also 45 automated tests, with stand-ins for the engine, the files, the app's session server and `open`, on the terminal and desktop surfaces: `claude plugin test tools/session-status`.
 
 ## Files
 
@@ -132,7 +136,7 @@ Also 31 automated tests, with stand-ins for the engine, the files, the app's ses
 | `hooks/register.tsx` | Watches the session, writes its status file, marks the title, draws the board |
 | `hooks/status.ts` | The state rule, the markers, and how the board reads the files |
 | `hooks/plan.ts` | Counts the steps. The same file as `tools/task-progress/hooks/plan.ts` (see below) |
-| `tests/` | 31 tests |
+| `tests/` | 45 tests |
 | `install.sh`, `uninstall.sh` | Add and remove it |
 
 `hooks/plan.ts` is a copy, not an import. Each add-on is installed as its own folder, so one cannot import a file from another. Keep the two copies the same: `diff tools/task-progress/hooks/plan.ts tools/session-status/hooks/plan.ts` must print nothing.

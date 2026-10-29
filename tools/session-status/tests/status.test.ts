@@ -6,9 +6,12 @@ import {
   detailOf,
   durationText,
   markerLabel,
+  mayRename,
   openArgv,
+  recordPath,
   stripMarker,
   titleFromSession,
+  titleSourceOf,
   withMarker,
 } from '../hooks/status'
 import type { Facts, StatusFile } from '../hooks/status'
@@ -103,6 +106,37 @@ describe('the sidebar marker', () => {
     expect(titleFromSession({ content: [{ type: 'text', text: '{"session":{"title":"Two"}}' }], isError: false })).toBe('Two')
     expect(titleFromSession({ content: [{ type: 'text', text: 'Title: Three' }], isError: false })).toBe('Three')
     expect(titleFromSession({ content: [{ type: 'text', text: 'nothing here' }], isError: false })).toBeNull()
+  })
+})
+
+describe("whose name the chat has", () => {
+  test("finds the app's record of the chat from the session's own ids", () => {
+    const env = {
+      execPath: '/home/demo/Library/Application Support/Claude/claude-code/2.1.309/claude',
+      accountId: 'acct-1',
+      organizationId: 'org-1',
+      hostSessionId: 'local_abc-1',
+    }
+    expect(recordPath(env)).toBe('/home/demo/Library/Application Support/Claude/claude-code-sessions/acct-1/org-1/local_abc-1.json')
+    expect(recordPath({ ...env, accountId: undefined })).toBeNull()
+    expect(recordPath({ ...env, hostSessionId: '../../x' })).toBeNull()
+    expect(recordPath({ ...env, execPath: '/usr/local/bin/claude' })).toBeNull()
+  })
+
+  test('reads only titleSource', () => {
+    expect(titleSourceOf('{"titleSource":"user","title":"x"}')).toBe('user')
+    expect(titleSourceOf('{"titleSource":"auto"}')).toBe('other')
+    expect(titleSourceOf('{"title":"older chat"}')).toBe('other')
+    expect(titleSourceOf('not json')).toBe('unknown')
+    expect(titleSourceOf('[1]')).toBe('unknown')
+  })
+
+  test('renames only when nobody else named the chat', () => {
+    expect(mayRename('user', 'Mine', null)).toBe(false)
+    expect(mayRename('other', 'Anything', 'Else')).toBe(true)
+    expect(mayRename('unknown', 'First title', null)).toBe(true)
+    expect(mayRename('unknown', '⏳ 1/3 Fix', '⏳ 1/3 Fix')).toBe(true)
+    expect(mayRename('unknown', 'Renamed by hand', '⏳ 1/3 Fix')).toBe(false)
   })
 })
 
