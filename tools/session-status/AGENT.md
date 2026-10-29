@@ -63,5 +63,6 @@ It leaves `~/.claude-session-status/` in place and prints how to delete it. Only
 | Symptom | What to do |
 | --- | --- |
 | `claude plugin install` says the marketplace is missing | Run `claude plugin marketplace add ~/.claude-tools`, then step 3 again. |
+| The person sees an approval card on every rename | That chat has a title they gave it themselves (not tested yet). Offer to turn markers off: `claude plugin install session-status@claude-tools --scope user --config markers=off`, or `off` in `/config`. |
 | No marker in the sidebar | Markers only appear in the desktop app, and only after the app has named the chat. Check the **Sidebar markers** option is not `off`. |
 | Nothing shows at all | Run `claude -p "hi" --debug-file /tmp/claude-debug.log` and `grep session-status /tmp/claude-debug.log`. "rollout flag ... is off" means Claude Code is too old: `claude update`. |

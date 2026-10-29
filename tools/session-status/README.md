@@ -6,7 +6,11 @@ See which of your Claude sessions are **working**, which **need you**, and which
 - Type `/sessions` for a board of every session, the ones that need you first.
 - No alerts, no sounds, no pop-ups. It only shows.
 
-> No pictures yet: the sidebar and the board have not been captured from the desktop app.
+<img src="../../docs/images/session-status-sidebar.png" alt="The desktop app's sidebar with markers: 💬 2/5 Deploy the shop, ⏳ 4/7 Fix the login page, ⏳ 1/3 Add rate limiting, ✅ Write the release notes, ⚠️ 2/4 Upgrade the database driver, and two idle chats with no marker" width="640">
+
+<img src="../../docs/images/session-status-board.png" alt="The /sessions board: 1 needs you, 2 working, 1 done, 1 failed, 2 idle; one row per session with its state, title, project, steps bar, what it is on, account and time" width="760">
+
+> Pictures rendered from the add-on's real output (its markers, colours, dots, bars and texts) with demo sessions, in a drawn app window.
 
 ## Why you want it
 
@@ -79,6 +83,8 @@ The installer sets `A` the first time and never changes your pick after that. Pi
 | `C` | 🔵 | 🟡 | 🟢 | 🔴 |
 | `off` | no marker; an old one is taken away | | | |
 
+**A chat you named yourself** may ask you to approve each rename (not tested yet). If you see an approval card every time the marker changes, turn markers off: pick `off` in `/config`, or run `claude plugin install session-status@claude-tools --scope user --config markers=off`. The board keeps working without markers.
+
 ## Remove
 
 ```bash
@@ -100,15 +106,24 @@ Then type `/reload-plugins` in an open chat, or start a new one.
 
 | Problem | Fix |
 | --- | --- |
+| An approval card on every rename | The chat has a title you gave it. Turn markers off (see [Options](#options)). |
 | No marker in the sidebar | Markers only work in the desktop app. Check that the option is not `off`. A brand-new chat gets its marker once the app has named it. |
 | A chat says **working** but looks quiet | Something it started is still running (a helper agent or a background command). The board says how many. |
 | A row says "Not running" | That session stopped sending updates for over 2 minutes while working: its process has gone. |
 | Nothing at all | Run `claude -p "hi" --debug-file /tmp/claude-debug.log`, then `grep session-status /tmp/claude-debug.log`. Add-ons need Claude Code 2.1.278 or later (`claude update`). |
 
-## What was tested
+## Tested
 
-- 31 tests with stand-ins for the engine, the files, the app's session server and `open`, on the terminal and desktop surfaces: `claude plugin test tools/session-status`.
-- Built on macOS. The sidebar renaming and opening a chat from the board have **not yet been tried in the real desktop app**.
+In a real desktop app chat on macOS (2026-10-29):
+
+- The status file in `~/.claude-session-status/` updates live: state, steps, current step, project, account.
+- The sidebar marker works: the title went `⏳ 0/4 …` → `⏳ 1/4 …` as steps finished, and started again at `⏳ 1/3 …` for a new checklist. No approval card appeared, because the app had named that chat.
+- A background command counted as 1 helper and kept the chat **working**. It dropped to 0 once its finish notice arrived. A notice that lands while Claude is replying is counted at the chat's next step.
+- `/sessions` opened the board, and it looked right.
+
+Not yet tried: a chat you named yourself (see [Options](#options)), and opening a chat by clicking its title on the board.
+
+Also 31 automated tests, with stand-ins for the engine, the files, the app's session server and `open`, on the terminal and desktop surfaces: `claude plugin test tools/session-status`.
 
 ## Files
 

@@ -52,10 +52,17 @@ See where a long job is at a glance, and which chat is waiting on you. Run the w
     </td>
   </tr>
   <tr>
-    <td align="center"><b>3</b></td>
+    <td rowspan="2" align="center"><b>3</b></td>
     <td>🚦 <b><a href="tools/session-status">Session status</a></b></td>
-    <td>Puts a marker and step count in front of each chat's title in the desktop app's sidebar (<code>⏳ 4/7</code> working, <code>💬</code> needs you, <code>✅</code> done, <code>⚠️</code> failed), and <code>/sessions</code> opens a board of every session, the ones that need you first. No alerts. Pictures to come.</td>
+    <td>Puts a marker and step count in front of each chat's title in the desktop app's sidebar (<code>⏳ 4/7</code> working, <code>💬</code> needs you, <code>✅</code> done, <code>⚠️</code> failed), and <code>/sessions</code> opens a board of every session, the ones that need you first. No alerts.</td>
     <td>You run several chats at once and want to see which one is waiting on you, without opening each.</td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center">
+      <a href="docs/images/session-status-sidebar.png"><img src="docs/images/session-status-sidebar.png" alt="The desktop app's sidebar with a marker and step count before each chat's title" width="40%"></a>
+      <a href="docs/images/session-status-board.png"><img src="docs/images/session-status-board.png" alt="The /sessions board: needs you first, then working, done and failed, each with steps, what it is on, account and time" width="54%"></a>
+      <br><sub>Markers in the desktop app's sidebar, and the <code>/sessions</code> board</sub>
+    </td>
   </tr>
 </table>
 
