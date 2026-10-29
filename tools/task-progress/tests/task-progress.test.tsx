@@ -30,6 +30,8 @@ function engine(on: On) {
     result: { tasks: [{ id: '7', subject: 'Fix the login page', status: 'in_progress', blockedBy: [] }] },
   }))
   on('tool.call', { tool: 'TodoWrite' }, ($, e) => ({ result: { oldTodos: [], newTodos: e.todos } }))
+  on('tool.call', { tool: 'mcp__ccd_turn__update_plan' }, () => ({ result: 'ok' }))
+  on('tool.call', { tool: 'mcp__ccd_turn__wrap_up' }, () => ({ result: 'ok' }))
   on('prompt.submit', ($, e) => ({ text: e.text }))
   on('session.end', ($, e) => ({ sessionId: e.sessionId }))
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
@@ -95,6 +97,78 @@ describe('task-progress band', () => {
 
       expect(await ui.find({ type: 'Text', text: '1 of 4 done' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: 'Building' })).toBeDefined()
+    })
+
+    test(`reads the desktop app's update_plan list (${surface})`, async ($, on) => {
+      engine(on)
+      const ui = await $.ui.mount({ ...BAND, surface })
+
+      await $.tool.call({
+        tool: 'mcp__ccd_turn__update_plan',
+        scope: 'turn',
+        items: [
+          { content: 'Read the code', status: 'completed' },
+          { content: 'Fix the bug', status: 'in_progress' },
+          { content: 'Run tests', status: 'pending' },
+        ],
+      })
+
+      expect(await ui.find({ type: 'Text', text: '1 of 3 done' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: 'Fix the bug' })).toBeDefined()
+    })
+
+    test(`moves through update_plan's advance and step numbers (${surface})`, async ($, on) => {
+      engine(on)
+      const ui = await $.ui.mount({ ...BAND, surface })
+
+      await $.tool.call({
+        tool: 'mcp__ccd_turn__update_plan',
+        items: [
+          { content: 'One', status: 'in_progress' },
+          { content: 'Two', status: 'pending' },
+          { content: 'Three', status: 'pending' },
+          { content: 'Four', status: 'pending' },
+        ],
+      })
+      await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', advance: true })
+
+      expect(await ui.find({ type: 'Text', text: '1 of 4 done' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: 'Two' })).toBeDefined()
+
+      await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', done: [2, 3], start: 4 })
+
+      expect(await ui.find({ type: 'Text', text: '3 of 4 done' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: 'Four' })).toBeDefined()
+
+      // After the last step, advance just finishes it.
+      await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', advance: true })
+
+      expect(await ui.find({ type: 'Text', text: 'All 4 done' })).toBeDefined()
+    })
+
+    test(`checks off the whole list on wrap_up (${surface})`, async ($, on) => {
+      engine(on)
+      const ui = await $.ui.mount({ ...BAND, surface })
+
+      await $.tool.call({
+        tool: 'mcp__ccd_turn__update_plan',
+        items: [
+          { content: 'One', status: 'in_progress' },
+          { content: 'Two', status: 'pending' },
+        ],
+      })
+      await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up' })
+
+      expect(await ui.find({ type: 'Text', text: 'All 2 done' })).toBeDefined()
+    })
+
+    test(`ignores an update_plan list it cannot read (${surface})`, async ($, on) => {
+      engine(on)
+      const ui = await $.ui.mount({ ...BAND, surface })
+
+      await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: [{ content: 'One', status: 'maybe' }] })
+
+      expect(await ui.find({ key: 'task-progress' })).toBeUndefined()
     })
 
     test(`keeps a finished plan until the next prompt (${surface})`, async ($, on) => {

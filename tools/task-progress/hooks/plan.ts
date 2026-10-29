@@ -69,6 +69,61 @@ export function changeStep(steps: readonly Step[], id: string, change: StepChang
   })
 }
 
+const STATUSES: readonly string[] = ['pending', 'in_progress', 'completed']
+
+// The desktop app's update_plan sends its input as loose MCP arguments, so each item is checked before it counts.
+export function fromPlanItems(items: unknown): Step[] | null {
+  if (!Array.isArray(items)) {
+    return null
+  }
+
+  const steps: Step[] = []
+
+  for (const item of items) {
+    if (typeof item !== 'object' || item === null) {
+      return null
+    }
+
+    const { content, status } = item as { content?: unknown; status?: unknown }
+
+    if (typeof content !== 'string' || typeof status !== 'string' || !STATUSES.includes(status)) {
+      return null
+    }
+
+    steps.push({ id: `plan-${steps.length}`, title: content, activeTitle: null, status: status as StepStatus })
+  }
+
+  return steps
+}
+
+// update_plan's { advance: true }: finish the running step and start the next waiting one.
+export function advancePlan(steps: readonly Step[]): Step[] {
+  const finished = steps.map(step => (step.status === 'in_progress' ? { ...step, status: 'completed' as const } : step))
+  const next = finished.findIndex(step => step.status === 'pending')
+
+  return finished.map((step, index) => (index === next ? { ...step, status: 'in_progress' as const } : step))
+}
+
+// update_plan's { done: [n], start: m }: step numbers count from 1.
+export function markPlan(steps: readonly Step[], done: readonly number[], start: number | null): Step[] {
+  return steps.map((step, index) => {
+    if (done.includes(index + 1)) {
+      return { ...step, status: 'completed' as const }
+    }
+
+    if (start === index + 1) {
+      return { ...step, status: 'in_progress' as const }
+    }
+
+    return step
+  })
+}
+
+// wrap_up ends the turn's work and checks off the whole list.
+export function completeAll(steps: readonly Step[]): Step[] {
+  return steps.map(step => ({ ...step, status: 'completed' as const }))
+}
+
 export function signature(steps: readonly Step[]): string {
   return steps.map(step => `${step.id}:${step.status}`).join('|')
 }
