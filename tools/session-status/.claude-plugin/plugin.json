@@ -1,0 +1,20 @@
+{
+  "name": "session-status",
+  "version": "1.0.0",
+  "description": "Shows which sessions are working, need you, or are done: a marker in the desktop app's sidebar title and a /sessions board. No alerts.",
+  "author": {
+    "name": "Sourav Aggarwal",
+    "url": "https://github.com/SouravAggarwal"
+  },
+  "homepage": "https://github.com/SouravAggarwal/Claude-Tools",
+  "license": "MIT",
+  "userConfig": {
+    "markers": {
+      "type": "string",
+      "title": "Sidebar markers",
+      "description": "The marks put before each chat's title in the desktop app's sidebar. A: ⏳ working, 💬 needs you, ✅ done, ⚠️ failed. B: 🔹 🔸 ✔️ ❗. C: 🔵 🟡 🟢 🔴. off: no marks.",
+      "default": "A",
+      "options": ["A", "B", "C", "off"]
+    }
+  }
+}

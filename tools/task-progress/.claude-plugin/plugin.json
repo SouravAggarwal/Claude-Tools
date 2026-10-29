@@ -1,6 +1,6 @@
 {
   "name": "task-progress",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A progress bar above the prompt for Claude's task list: how many steps are done and which one is running.",
   "author": {
     "name": "Sourav Aggarwal",

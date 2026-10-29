@@ -4,11 +4,11 @@
 
 **Small, sharp add-ons that make [Claude Code](https://code.claude.com) nicer to live with.**
 
-See where a long job is at a glance. Run the work on a second Claude account from the same chat, and swap the two without losing a word.
+See where a long job is at a glance, and which chat is waiting on you. Run the work on a second Claude account from the same chat, and swap the two without losing a word.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 [![Claude Code add-ons](https://img.shields.io/badge/Claude%20Code-add--ons-d97757)](https://code.claude.com)
-[![Tools](https://img.shields.io/badge/tools-2-8a63d2)](#-the-tools)
+[![Tools](https://img.shields.io/badge/tools-3-8a63d2)](#-the-tools)
 [![Made on macOS](https://img.shields.io/badge/made%20on-macOS-555)](#-what-you-need)
 
 [The tools](#-the-tools) · [Install](#-install) · [Ask your AI to install](#-or-just-ask-your-ai) · [Add your own](#-add-your-own-tool)
@@ -51,6 +51,12 @@ See where a long job is at a glance. Run the work on a second Claude account fro
       <br><sub>The <code>claude-accounts</code> live view (also inside the app: type <code>/accounts</code>)</sub>
     </td>
   </tr>
+  <tr>
+    <td align="center"><b>3</b></td>
+    <td>🚦 <b><a href="tools/session-status">Session status</a></b></td>
+    <td>Puts a marker and step count in front of each chat's title in the desktop app's sidebar (<code>⏳ 4/7</code> working, <code>💬</code> needs you, <code>✅</code> done, <code>⚠️</code> failed), and <code>/sessions</code> opens a board of every session, the ones that need you first. No alerts. Pictures to come.</td>
+    <td>You run several chats at once and want to see which one is waiting on you, without opening each.</td>
+  </tr>
 </table>
 
 Each tool has its own folder with a **README** (for you) and an **AGENT.md** (for your AI agent). Pictures are rendered from each tool's real output with demo data; click one to see it full size.
@@ -71,6 +77,10 @@ git clone https://github.com/SouravAggarwal/Claude-Tools ~/.claude-tools
 
 ```bash
 ~/.claude-tools/tools/multi-account/install.sh
+```
+
+```bash
+~/.claude-tools/tools/session-status/install.sh
 ```
 
 **3. Start a new chat.** That's it. Each install script tells you what it changed and what (if anything) is next.
@@ -127,12 +137,16 @@ Claude-Tools/
     │   ├── AGENT.md           ← for AI agents: exact install steps
     │   ├── install.sh · uninstall.sh
     │   └── hooks/ · tests/
-    └── multi-account/         ← 🔀 switch accounts, keep the chat
+    ├── multi-account/         ← 🔀 switch accounts, keep the chat
+    │   ├── README.md · AGENT.md
+    │   ├── install.sh · uninstall.sh
+    │   ├── bin/               ← claude-use, claude-ask, claude-accounts, claude-accounts-add, claude-as
+    │   ├── account-status/    ← the add-on behind the live limits
+    │   └── templates/
+    └── session-status/        ← 🚦 which sessions work, need you, are done
         ├── README.md · AGENT.md
         ├── install.sh · uninstall.sh
-        ├── bin/               ← claude-use, claude-ask, claude-accounts, claude-accounts-add, claude-as
-        ├── account-status/    ← the add-on behind the live limits
-        └── templates/
+        └── hooks/ · tests/
 ```
 
 ## ✅ What you need

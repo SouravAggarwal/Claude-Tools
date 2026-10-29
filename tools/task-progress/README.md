@@ -92,5 +92,5 @@ Then type `/reload-plugins` in an open chat, or start a new one.
 | `hooks/register.tsx` | Watches the task tools and draws the bar |
 | `hooks/plan.ts` | Counts the steps |
 | `hooks/bar.ts` | The bar's text and picture |
-| `tests/` | 16 tests, run with `claude plugin test tools/task-progress` |
+| `tests/` | 24 tests, run with `claude plugin test tools/task-progress` |
 | `install.sh`, `uninstall.sh` | Add and remove it |

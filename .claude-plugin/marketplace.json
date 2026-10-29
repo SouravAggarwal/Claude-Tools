@@ -1,7 +1,10 @@
 {
   "name": "claude-tools",
-  "description": "Small, sharp add-ons for Claude Code: a live progress bar and multi-account switching with live limits.",
-  "owner": { "name": "Sourav Aggarwal", "url": "https://github.com/SouravAggarwal" },
+  "description": "Small, sharp add-ons for Claude Code: a live progress bar, multi-account switching with live limits, and a status for every session.",
+  "owner": {
+    "name": "Sourav Aggarwal",
+    "url": "https://github.com/SouravAggarwal"
+  },
   "plugins": [
     {
       "name": "task-progress",
@@ -12,6 +15,11 @@
       "name": "account-status",
       "source": "./tools/multi-account/account-status",
       "description": "Part of multi-account: reports each chat's account, 5-hour and weekly limits, context and current work; /accounts shows them all."
+    },
+    {
+      "name": "session-status",
+      "source": "./tools/session-status",
+      "description": "Shows which sessions are working, need you, or are done: a marker in the desktop app's sidebar title and a /sessions board. No alerts."
     }
   ]
 }

@@ -124,6 +124,91 @@ export function completeAll(steps: readonly Step[]): Step[] {
   return steps.map(step => ({ ...step, status: 'completed' as const }))
 }
 
+// The desktop app's own plan tool, used there instead of TodoWrite and the Task tools.
+export const UPDATE_PLAN = 'mcp__ccd_turn__update_plan'
+export const WRAP_UP = 'mcp__ccd_turn__wrap_up'
+
+function stepNumbers(value: unknown): number[] {
+  const values = Array.isArray(value) ? value : [value]
+
+  return values.filter((n): n is number => typeof n === 'number' && Number.isInteger(n))
+}
+
+// One update_plan call: a whole new list, an advance, or step numbers to finish and start.
+export function planChange(e: { [argument: string]: unknown }): ((steps: readonly Step[]) => Step[]) | null {
+  const items = fromPlanItems(e.items)
+
+  if (items !== null) {
+    return () => items
+  }
+
+  if (e.advance === true) {
+    return advancePlan
+  }
+
+  const done = stepNumbers(e.done)
+  const start = typeof e.start === 'number' && Number.isInteger(e.start) ? e.start : null
+
+  return done.length > 0 || start !== null ? steps => markPlan(steps, done, start) : null
+}
+
+type Loose = { readonly [field: string]: unknown }
+
+function text(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
+function status(value: unknown): StepStatus | 'deleted' | undefined {
+  return value === 'deleted' || (typeof value === 'string' && STATUSES.includes(value))
+    ? (value as StepStatus | 'deleted')
+    : undefined
+}
+
+function asLoose(value: unknown): Loose | null {
+  return typeof value === 'object' && value !== null ? (value as Loose) : null
+}
+
+// Every plan tool in one place, for an add-on that watches all tool calls: the steps after a call that
+// succeeded, or null when the call says nothing about the plan. `input` is the call, `result` its answer.
+export function stepsAfterCall(steps: readonly Step[], input: Loose, result: unknown): Step[] | null {
+  const answer = asLoose(result)
+
+  switch (input.tool) {
+    case 'TodoWrite':
+      return Array.isArray(answer?.newTodos) ? fromTodos(answer.newTodos as Todo[]) : null
+    case 'TaskCreate': {
+      const id = text(asLoose(answer?.task)?.id)
+      const title = text(input.subject)
+
+      return id && title ? upsertStep(steps, { id, title, activeTitle: text(input.activeForm) ?? null, status: 'pending' }) : null
+    }
+    case 'TaskUpdate': {
+      const id = text(input.taskId)
+
+      return id && answer?.success === true
+        ? changeStep(steps, id, { title: text(input.subject), activeTitle: text(input.activeForm), status: status(input.status) })
+        : null
+    }
+    case 'TaskList':
+      return Array.isArray(answer?.tasks) ? fromTaskList(answer.tasks as ListedTask[], steps) : null
+    case 'TaskGet': {
+      const task = asLoose(answer?.task)
+      const id = text(task?.id)
+
+      return task && id ? changeStep(steps, id, { title: text(task.subject), status: status(task.status) }) : null
+    }
+    case UPDATE_PLAN: {
+      const change = planChange(input)
+
+      return change === null ? null : change(steps)
+    }
+    case WRAP_UP:
+      return completeAll(steps)
+    default:
+      return null
+  }
+}
+
 export function signature(steps: readonly Step[]): string {
   return steps.map(step => `${step.id}:${step.status}`).join('|')
 }

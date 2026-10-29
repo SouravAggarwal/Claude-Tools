@@ -57,6 +57,12 @@ claude plugin validate tools/<tool>/<add-on folder>
 claude plugin test tools/<tool>/<add-on folder>
 ```
 
+`hooks/plan.ts` is shared by task-progress and session-status as two identical copies (an add-on cannot import from another add-on's folder). After changing either, copy it over and check:
+
+```bash
+diff tools/task-progress/hooks/plan.ts tools/session-status/hooks/plan.ts
+```
+
 Then run the tool's `install.sh`, use it, and run `uninstall.sh`, all in a throwaway home folder, so nothing on your own computer changes:
 
 ```bash

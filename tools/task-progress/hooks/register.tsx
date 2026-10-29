@@ -3,15 +3,15 @@ import type { EngineInterface, Register } from 'claude-code'
 import { barLabel, svgBar } from './bar'
 import {
   EMPTY_PLAN,
-  advancePlan,
+  UPDATE_PLAN,
+  WRAP_UP,
   changeStep,
   completeAll,
   filledCells,
-  fromPlanItems,
   fromTaskList,
   fromTodos,
-  markPlan,
   isShown,
+  planChange,
   progressOf,
   signature,
   upsertStep,
@@ -24,34 +24,6 @@ let current: Plan = EMPTY_PLAN
 function updatePlan($: EngineInterface, change: (value: Plan) => Plan): void {
   current = change(current)
   $.ui.invalidate('ui.render')
-}
-
-// The desktop app's own plan tool, used there instead of TodoWrite and the Task tools.
-const UPDATE_PLAN = 'mcp__ccd_turn__update_plan'
-const WRAP_UP = 'mcp__ccd_turn__wrap_up'
-
-function stepNumbers(value: unknown): number[] {
-  const values = Array.isArray(value) ? value : [value]
-
-  return values.filter((n): n is number => typeof n === 'number' && Number.isInteger(n))
-}
-
-// One update_plan call: a whole new list, an advance, or step numbers to finish and start.
-function planChange(e: { [argument: string]: unknown }): ((steps: readonly Step[]) => Step[]) | null {
-  const items = fromPlanItems(e.items)
-
-  if (items !== null) {
-    return () => items
-  }
-
-  if (e.advance === true) {
-    return advancePlan
-  }
-
-  const done = stepNumbers(e.done)
-  const start = typeof e.start === 'number' && Number.isInteger(e.start) ? e.start : null
-
-  return done.length > 0 || start !== null ? steps => markPlan(steps, done, start) : null
 }
 
 function withSteps(change: (steps: readonly Step[]) => Step[]): (value: Plan) => Plan {
