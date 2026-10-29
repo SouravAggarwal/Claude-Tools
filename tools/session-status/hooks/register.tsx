@@ -284,10 +284,13 @@ export const register: Register = (on, options) => {
     return answer
   }).catch(($, e, next) => next(e))
 
-  // At each stop the engine lists the background work still in flight: the truth, whatever we missed.
+  // At each stop the engine lists the background work still in flight. It only takes away what we saw start
+  // and is no longer listed (a finish notice we missed); it never adds: the list also holds watchers the app
+  // arms itself that never end by design (an artifact page's comment watcher), which would keep it working.
   on('classic.Stop', async ($, e, next) => {
     if (Array.isArray(e.background_tasks)) {
-      background = new Set(e.background_tasks.map(task => task.id))
+      const inFlight = new Set(e.background_tasks.map(task => task.id))
+      background = new Set([...background].filter(id => inFlight.has(id)))
       await publish($)
     }
 

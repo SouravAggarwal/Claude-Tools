@@ -231,7 +231,9 @@ describe('the status file', () => {
     await begin($)
     await startTurn($)
     await $.tool.call({ tool: 'Bash', command: 'npm test', description: 'tests', run_in_background: true })
-    await $.tool.call({ tool: 'Agent', description: 'reviewer', prompt: 'p', subagent_type: 'general-purpose', run_in_background: true })
+    // Older builds take run_in_background on Agent; newer ones have none, and the agent counts by its own loop.
+    const reviewer = { tool: 'Agent' as const, description: 'reviewer', prompt: 'p', subagent_type: 'general-purpose', run_in_background: true }
+    await $.tool.call(reviewer)
     await startTurn($, 'reviewer')
     await endTurn($)
     expect(status(w)).toMatchObject({ state: 'working', helpersRunning: 2 })
@@ -262,6 +264,67 @@ describe('the status file', () => {
 
     await $.classic.Stop({ stop_hook_active: false, background_tasks: [] })
     expect(status(w)).toMatchObject({ state: 'done', helpersRunning: 0 })
+  })
+
+  test('a watcher the app armed itself, listed at a stop, never keeps it working', async ($, on) => {
+    const w = world()
+    engine(on, w)
+    await begin($)
+    await startTurn($)
+    await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: PLAN })
+    await endTurn($)
+    await $.classic.Stop({
+      stop_hook_active: false,
+      background_tasks: [
+        { id: 'x', type: 'monitor', status: 'running', description: 'Watch for page comments' },
+        { id: 'y', type: 'artifact-comment-monitor', status: 'running', description: 'Artifact comments' },
+      ],
+    })
+    expect(status(w)?.helpersRunning).toBe(0)
+    expect(status(w)?.state).not.toBe('working')
+
+    await startTurn($)
+    await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up' })
+    await endTurn($)
+    await $.classic.Stop({
+      stop_hook_active: false,
+      background_tasks: [{ id: 'y', type: 'artifact-comment-monitor', status: 'running', description: 'Artifact comments' }],
+    })
+    expect(status(w)).toMatchObject({ state: 'done', helpersRunning: 0 })
+  })
+
+  test('a shell it saw start, still listed at a stop, keeps it working', async ($, on) => {
+    const w = world()
+    engine(on, w)
+    await begin($)
+    await startTurn($)
+    await $.tool.call({ tool: 'Bash', command: 'npm run build', description: 'build', run_in_background: true })
+    await endTurn($)
+    await $.classic.Stop({
+      stop_hook_active: false,
+      background_tasks: [
+        { id: 'build', type: 'shell', status: 'running', description: 'build', command: 'npm run build' },
+        { id: 'y', type: 'artifact-comment-monitor', status: 'running', description: 'Artifact comments' },
+      ],
+    })
+    expect(status(w)).toMatchObject({ state: 'working', helpersRunning: 1 })
+  })
+
+  test('a shell it saw start, missing from the list at a stop, is taken away', async ($, on) => {
+    const w = world()
+    engine(on, w)
+    await begin($)
+    await startTurn($)
+    await $.tool.call({ tool: 'Bash', command: 'npm run build', description: 'build', run_in_background: true })
+    await $.tool.call({ tool: 'Bash', command: 'npm run lint', description: 'lint', run_in_background: true })
+    await endTurn($)
+    expect(status(w)?.helpersRunning).toBe(2)
+
+    await $.classic.Stop({
+      stop_hook_active: false,
+      background_tasks: [{ id: 'lint', type: 'shell', status: 'running', description: 'lint', command: 'npm run lint' }],
+    })
+    expect(status(w)).toMatchObject({ state: 'working', helpersRunning: 1 })
   })
 
   test("picks up the multi-account tag for the same session", async ($, on) => {
