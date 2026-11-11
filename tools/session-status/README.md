@@ -1,16 +1,14 @@
-# 🚦 Session status
+# 🚦 Session Status Markers for Claude Code
 
-See which of your Claude sessions are **working**, which **need you**, and which are **done**, without opening each one.
+See at a glance which of your Claude chats are **working**, which **need you**, and which are **done**, without opening each one.
 
-- In the Claude desktop app, each chat's title in the sidebar gets a marker and a step count: `⏳ 4/7 Fix the login page`.
+- In the Claude desktop app, each chat's title in the sidebar gets a marker and a step count: `⏳ 4/7 Fix the login page`. ⏳ working, 💬 needs you, ✅ done, ⚠️ failed.
 - Type `/sessions` for a board of every session, the ones that need you first.
 - No alerts, no sounds, no pop-ups. It only shows.
 
-<img src="../../docs/images/session-status-sidebar.png" alt="The desktop app's sidebar with markers: 💬 2/5 Deploy the shop, ⏳ 4/7 Fix the login page, ⏳ 1/3 Add rate limiting, ✅ Write the release notes, ⚠️ 2/4 Upgrade the database driver, and two idle chats with no marker" width="640">
+![The desktop app's sidebar with markers: 💬 2/5 Deploy the shop, ⏳ 4/7 Fix the login page, ⏳ 1/3 Add rate limiting, ✅ Write the release notes, ⚠️ 2/4 Upgrade the database driver, and two idle chats with no marker](images/sidebar-markers.png)
 
-<img src="../../docs/images/session-status-board.png" alt="The /sessions board: 1 needs you, 2 working, 1 done, 1 failed, 2 idle; one row per session with its state, title, project, steps bar, what it is on, account and time" width="760">
-
-> Pictures rendered from the add-on's real output (its markers, colours, dots, bars and texts) with demo sessions, in a drawn app window.
+> Picture rendered from the add-on's real output (its markers and texts) with demo sessions, in a drawn app window.
 
 ## Why you want it
 

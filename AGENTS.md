@@ -20,7 +20,7 @@ This is a **public** repository of small, generic add-ons and commands for Claud
 | `README.md` | The front page: what each tool is, when you need it, pictures, install. |
 | `AGENTS.md` | These rules. `CLAUDE.md` only imports it. |
 | `.claude-plugin/marketplace.json` | The add-on list Claude Code installs from (`<add-on>@claude-tools`). |
-| `docs/images/` | Pictures used by the READMEs. |
+| `docs/images/` | Extra pictures for the front page. Each add-on keeps its icon and its one listing picture in its own `images/` folder, because Anthropic's directory reads only the plugin folder. |
 | `tools/<tool>/` | One folder per tool: everything the tool needs and nothing else. |
 
 ## Every tool folder has

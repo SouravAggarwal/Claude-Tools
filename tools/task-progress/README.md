@@ -1,12 +1,10 @@
-# 📊 Task progress bar
+# 📊 Task Progress Bar for Claude Code
 
-A live progress bar above the prompt box for Claude's checklist: how many steps are done, and which one is running now.
+A **live progress bar above the prompt** for Claude's to-do list: see how many steps are done, which one is running now, and when the whole job is finished. Works in the terminal and in the Claude desktop app.
 
-<img src="../../docs/images/progress-bar-terminal.png" alt="The progress bar in a terminal session: an orange bar, 3 of 5 done, Running tests, hide" width="720">
+![The progress bar above the prompt in the Claude desktop app: a rounded orange bar, 3 of 5 done, Running tests, Hide](images/progress-bar.png)
 
-<img src="../../docs/images/progress-bar-desktop.png" alt="The progress bar in the Claude desktop app: a rounded orange bar, 3 of 5 done, Running tests, Hide" width="640">
-
-> Pictures rendered from the add-on's real output, with a demo checklist.
+> Picture rendered from the add-on's real output, with a demo checklist.
 
 ## Why you want it
 

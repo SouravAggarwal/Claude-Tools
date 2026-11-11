@@ -1,6 +1,6 @@
 {
   "name": "claude-tools",
-  "description": "Small, sharp add-ons for Claude Code: a live progress bar, multi-account switching with live limits, a status for every session, and sidebar folders with your own names.",
+  "description": "Small, sharp add-ons for Claude Code: a live task progress bar, session status markers, a usage limits monitor for one or more accounts, and sidebar folders with your own names.",
   "owner": {
     "name": "Sourav Aggarwal",
     "url": "https://github.com/SouravAggarwal"
@@ -9,22 +9,26 @@
     {
       "name": "task-progress",
       "source": "./tools/task-progress",
-      "description": "A progress bar above the prompt for Claude's checklist: how many steps are done and which one is running."
+      "description": "A live progress bar above the prompt for Claude's to-do list: see how many steps are done, which one is running now, and when the whole job is finished. Works in the terminal and the desktop app.",
+      "displayName": "Task Progress Bar"
     },
     {
       "name": "account-status",
       "source": "./tools/multi-account/account-status",
-      "description": "Part of multi-account: reports each chat's account, 5-hour and weekly limits, context and current work; /accounts shows them all."
+      "description": "Watch your Claude usage limits live: 5-hour and weekly use with reset times, plus each chat's context window and current work, for one account or several, in the /accounts panel.",
+      "displayName": "Usage Limits Monitor"
     },
     {
       "name": "session-status",
       "source": "./tools/session-status",
-      "description": "Shows which sessions are working, need you, or are done: a marker in the desktop app's sidebar title and a /sessions board. No alerts."
+      "description": "See at a glance which Claude chats are working ⏳, need you 💬, are done ✅ or failed ⚠️: a live marker and step count on each chat in the desktop app's sidebar, plus a /sessions board of every chat. No pop-ups.",
+      "displayName": "Session Status Markers"
     },
     {
       "name": "sidebar-folders",
       "source": "./tools/sidebar-folders",
-      "description": "Folders with your own names in the desktop app's sidebar: new chats file themselves by project or title, chats Claude starts follow their parent, and /folder moves a chat by hand."
+      "description": "Organize your Claude desktop chats into folders with your own names. New chats sort themselves by project or title words, chats Claude starts follow their parent, and /folder moves any chat.",
+      "displayName": "Sidebar Folders"
     }
   ]
 }

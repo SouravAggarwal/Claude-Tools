@@ -28,7 +28,7 @@ See where a long job is at a glance, and which chat is waiting on you. Sort your
   </tr>
   <tr>
     <td rowspan="2" align="center"><b>1</b></td>
-    <td>📊 <b><a href="tools/task-progress">Task progress bar</a></b></td>
+    <td>📊 <b><a href="tools/task-progress">Task Progress Bar</a></b></td>
     <td>Draws a live bar above the prompt box: <code>███████░░░░ 3 of 5 done  Running tests</code>. Turns green when the job is done.</td>
     <td>Claude works through long, many-step jobs and you want to know how far it has got without scrolling.</td>
   </tr>
@@ -53,7 +53,7 @@ See where a long job is at a glance, and which chat is waiting on you. Sort your
   </tr>
   <tr>
     <td rowspan="2" align="center"><b>3</b></td>
-    <td>🚦 <b><a href="tools/session-status">Session status</a></b></td>
+    <td>🚦 <b><a href="tools/session-status">Session Status Markers</a></b></td>
     <td>Puts a marker and step count in front of each chat's title in the desktop app's sidebar (<code>⏳ 4/7</code> working, <code>💬</code> needs you, <code>✅</code> done, <code>⚠️</code> failed), and <code>/sessions</code> opens a board of every session, the ones that need you first. No alerts.</td>
     <td>You run several chats at once and want to see which one is waiting on you, without opening each.</td>
   </tr>
@@ -66,13 +66,13 @@ See where a long job is at a glance, and which chat is waiting on you. Sort your
   </tr>
   <tr>
     <td rowspan="2" align="center"><b>4</b></td>
-    <td>🗂️ <b><a href="tools/sidebar-folders">Sidebar folders</a></b></td>
+    <td>🗂️ <b><a href="tools/sidebar-folders">Sidebar Folders</a></b></td>
     <td>Folders with your own names in the desktop app's sidebar. New chats file themselves by project folder or title words, chats Claude starts follow their parent, and <code>/folder &lt;name&gt;</code> moves a chat by hand. A chat stays where it was filed.</td>
     <td>The sidebar's grouping by repository is not how you think about your work, and you are tired of dragging chats around.</td>
   </tr>
   <tr>
     <td colspan="3" align="center">
-      <a href="docs/images/sidebar-folders.png"><img src="docs/images/sidebar-folders.png" alt="The desktop app's sidebar with folders named Shop app, Code reviews and Side project, and /folder moving a chat" width="60%"></a>
+      <a href="tools/sidebar-folders/images/sidebar-folders.png"><img src="tools/sidebar-folders/images/sidebar-folders.png" alt="The desktop app's sidebar with folders named Shop app, Code reviews and Side project, and /folder moving a chat" width="60%"></a>
       <br><sub>Your own folders in the sidebar, and <code>/folder</code> moving a chat</sub>
     </td>
   </tr>

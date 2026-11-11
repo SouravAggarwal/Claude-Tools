@@ -1,13 +1,14 @@
-# 🗂️ Sidebar folders
+# 🗂️ Sidebar Folders for Claude Code
 
-Sort the chats in the Claude desktop app's sidebar into **folders with your own names**, and keep them there.
+**Organize your Claude desktop chats into folders with your own names**, and keep them there.
 
-- New chats file themselves: by the project folder they run in, or by a word in their title.
+- New chats sort themselves: by the project folder they run in, or by a word in their title.
 - A chat Claude starts from another chat goes into the same folder as its parent.
 - Type `/folder <name>` to move a chat by hand. The folder is made if it is new.
+- Rename folders in the sidebar whenever you like: their rules keep working.
 - A chat stays in its folder until you move it. The add-on never moves a chat twice.
 
-<img src="../../docs/images/sidebar-folders.png" alt="The desktop app's sidebar with folders named Shop app, Code reviews and Side project, and /folder moving a chat" width="80%">
+![The desktop app's sidebar with folders named Shop app, Code reviews and Side project, and /folder moving a chat](images/sidebar-folders.png)
 
 ## Why you want it
 

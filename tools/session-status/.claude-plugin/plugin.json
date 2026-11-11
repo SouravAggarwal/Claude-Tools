@@ -1,13 +1,32 @@
 {
   "name": "session-status",
-  "version": "1.1.0",
-  "description": "Shows which sessions are working, need you, or are done: a marker in the desktop app's sidebar title and a /sessions board. No alerts.",
+  "displayName": "Session Status Markers",
+  "version": "1.1.1",
+  "description": "See at a glance which Claude chats are working ⏳, need you 💬, are done ✅ or failed ⚠️: a live marker and step count on each chat in the desktop app's sidebar, plus a /sessions board of every chat. No pop-ups.",
   "author": {
     "name": "Sourav Aggarwal",
     "url": "https://github.com/SouravAggarwal"
   },
   "homepage": "https://github.com/SouravAggarwal/Claude-Tools",
+  "repository": "https://github.com/SouravAggarwal/Claude-Tools",
   "license": "MIT",
+  "keywords": [
+    "session status",
+    "sessions",
+    "chat status",
+    "sidebar",
+    "multitasking",
+    "parallel sessions",
+    "many chats",
+    "needs input",
+    "dashboard",
+    "status board",
+    "productivity",
+    "desktop app"
+  ],
+  "icon": "./images/icon.svg",
+  "documentationUrl": "https://github.com/SouravAggarwal/Claude-Tools/tree/main/tools/session-status#readme",
+  "supportUrl": "https://github.com/SouravAggarwal/Claude-Tools/issues",
   "userConfig": {
     "markers": {
       "type": "string",

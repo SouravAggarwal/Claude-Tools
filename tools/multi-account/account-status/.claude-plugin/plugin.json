@@ -1,11 +1,30 @@
 {
   "name": "account-status",
-  "version": "1.1.1",
-  "description": "Reports each session's account, 5-hour and weekly limits, context window and current work to ~/.claude-accounts/status, and shows them all with /accounts.",
+  "displayName": "Usage Limits Monitor",
+  "version": "1.1.2",
+  "description": "Watch your Claude usage limits live: 5-hour and weekly use with reset times, plus each chat's context window and current work, for one account or several, in the /accounts panel.",
   "author": {
     "name": "Sourav Aggarwal",
     "url": "https://github.com/SouravAggarwal"
   },
   "homepage": "https://github.com/SouravAggarwal/Claude-Tools",
-  "license": "MIT"
+  "repository": "https://github.com/SouravAggarwal/Claude-Tools",
+  "license": "MIT",
+  "keywords": [
+    "usage limits",
+    "rate limits",
+    "limits",
+    "5-hour limit",
+    "weekly limit",
+    "usage",
+    "quota",
+    "context window",
+    "multiple accounts",
+    "account switching",
+    "dashboard",
+    "monitor"
+  ],
+  "icon": "./images/icon.svg",
+  "documentationUrl": "https://github.com/SouravAggarwal/Claude-Tools/tree/main/tools/multi-account/account-status#readme",
+  "supportUrl": "https://github.com/SouravAggarwal/Claude-Tools/issues"
 }

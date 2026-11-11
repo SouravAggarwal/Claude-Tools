@@ -1,11 +1,30 @@
 {
   "name": "task-progress",
-  "version": "1.1.1",
-  "description": "A progress bar above the prompt for Claude's task list: how many steps are done and which one is running.",
+  "displayName": "Task Progress Bar",
+  "version": "1.1.2",
+  "description": "A live progress bar above the prompt for Claude's to-do list: see how many steps are done, which one is running now, and when the whole job is finished. Works in the terminal and the desktop app.",
   "author": {
     "name": "Sourav Aggarwal",
     "url": "https://github.com/SouravAggarwal"
   },
   "homepage": "https://github.com/SouravAggarwal/Claude-Tools",
-  "license": "MIT"
+  "repository": "https://github.com/SouravAggarwal/Claude-Tools",
+  "license": "MIT",
+  "keywords": [
+    "progress bar",
+    "progress",
+    "to-do list",
+    "todo",
+    "task list",
+    "checklist",
+    "tasks",
+    "long running tasks",
+    "status",
+    "productivity",
+    "terminal",
+    "desktop app"
+  ],
+  "icon": "./images/icon.svg",
+  "documentationUrl": "https://github.com/SouravAggarwal/Claude-Tools/tree/main/tools/task-progress#readme",
+  "supportUrl": "https://github.com/SouravAggarwal/Claude-Tools/issues"
 }
