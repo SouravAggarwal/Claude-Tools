@@ -168,6 +168,24 @@ describe('filing a new chat', () => {
     expect(w.moves).toEqual(['g3'])
   })
 
+  test('a folder renamed in the sidebar keeps its rule: the rule saves the id the first time', async ($, on) => {
+    const w = world({ files: new Map([[RULES, RULES_TEXT]]), groups: [{ id: 'g4', name: '🛍️ Shop' }] })
+    engine(on, w)
+    await begin($)
+    await turn($)
+    expect(w.moves).toEqual(['g4'])
+    expect(JSON.parse(w.files.get(RULES) ?? '{}').rules[1]).toEqual({ name: 'Shop', id: 'g4', projects: ['~/code/shop'] })
+
+    // The person renames it again; a new chat still lands there and no second folder is made.
+    w.groups[0].name = 'Store'
+    w.files.delete(MARK)
+    w.self.groupId = null
+    await begin($)
+    await turn($)
+    expect(w.moves).toEqual(['g4', 'g4'])
+    expect(w.groups).toHaveLength(1)
+  })
+
   test('a chat already in a folder, or one already decided, is never moved', async ($, on) => {
     const w = world({ files: new Map([[RULES, RULES_TEXT]]), groups: [{ id: 'g5', name: 'Mine' }], self: { title: 'Review', groupId: 'g5' } })
     engine(on, w)
@@ -212,7 +230,7 @@ describe('/folder', () => {
     await begin($, `${HOME}/code/blog`)
     expect(await folder($, 'Writing --project')).toBe('Moved this chat to "Writing". New chats in ~/code/blog will go there too.')
     expect(w.moves).toEqual(['g1'])
-    expect(JSON.parse(w.files.get(RULES) ?? '{}')).toEqual({ followParent: true, rules: [{ name: 'Writing', projects: ['~/code/blog'] }] })
+    expect(JSON.parse(w.files.get(RULES) ?? '{}')).toEqual({ followParent: true, rules: [{ name: 'Writing', id: 'g1', projects: ['~/code/blog'] }] })
   })
 
   test('shows where the chat is, and none takes it out for good', async ($, on) => {

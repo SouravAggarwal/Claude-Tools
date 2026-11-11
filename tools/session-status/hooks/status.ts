@@ -163,11 +163,12 @@ export function titleSourceOf(text: string): TitleSource {
   }
 }
 
-// The app asks the person before renaming a chat they named, and no setting can answer for them, so a
-// chat they named is never renamed. Without the record, only a title this add-on wrote last (or a chat it
-// never wrote) is renamed: any other title means someone renamed it.
-export function mayRename(source: TitleSource, current: string, lastWritten: string | null): boolean {
-  if (source === 'user') return false
+// The app asks the person to approve each rename of a chat they named. `updateRenamed` (the "Chats you
+// renamed" option) says whether to rename it anyway, so the marker stays true, or leave their name alone.
+// Without the record, only a title this add-on wrote last (or a chat it never wrote) is renamed: any other
+// title means someone renamed it.
+export function mayRename(source: TitleSource, current: string, lastWritten: string | null, updateRenamed: boolean): boolean {
+  if (source === 'user') return updateRenamed
   if (source === 'other') return true
 
   return lastWritten === null || current === lastWritten

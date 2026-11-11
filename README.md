@@ -65,10 +65,16 @@ See where a long job is at a glance, and which chat is waiting on you. Sort your
     </td>
   </tr>
   <tr>
-    <td align="center"><b>4</b></td>
+    <td rowspan="2" align="center"><b>4</b></td>
     <td>🗂️ <b><a href="tools/sidebar-folders">Sidebar folders</a></b></td>
     <td>Folders with your own names in the desktop app's sidebar. New chats file themselves by project folder or title words, chats Claude starts follow their parent, and <code>/folder &lt;name&gt;</code> moves a chat by hand. A chat stays where it was filed.</td>
     <td>The sidebar's grouping by repository is not how you think about your work, and you are tired of dragging chats around.</td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center">
+      <a href="docs/images/sidebar-folders.png"><img src="docs/images/sidebar-folders.png" alt="The desktop app's sidebar with folders named Shop app, Code reviews and Side project, and /folder moving a chat" width="60%"></a>
+      <br><sub>Your own folders in the sidebar, and <code>/folder</code> moving a chat</sub>
+    </td>
   </tr>
 </table>
 

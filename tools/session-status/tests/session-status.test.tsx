@@ -397,7 +397,17 @@ describe('the sidebar title', () => {
     expect(w.renameCalls).toBe(1)
   })
 
-  test('never renames a chat the person named, and keeps a marker in their name as text', async ($, on) => {
+  test('keeps the marker current in a chat the person named, keeping their words', async ($, on) => {
+    const w = world({ title: '⏳ 0/8 AWS' })
+    w.files.set(RECORD, record('user'))
+    engine(on, w, DESKTOP_ENV)
+    await begin($)
+    await startTurn($)
+    await endTurn($)
+    expect(w.renames).toEqual(['AWS', '⏳ AWS', '✅ AWS'])
+  })
+
+  test('with renamed chats left alone, never renames one, and keeps a marker in their name as text', { options: { renamedChats: 'leave' } }, async ($, on) => {
     const w = world({ title: '⏳ 2/5 city url' })
     w.files.set(RECORD, record('user'))
     engine(on, w, DESKTOP_ENV)
@@ -422,7 +432,7 @@ describe('the sidebar title', () => {
     })
   }
 
-  test('markers come back once the chat is no longer named by the person', async ($, on) => {
+  test('markers come back once the chat is no longer named by the person', { options: { renamedChats: 'leave' } }, async ($, on) => {
     const w = world({ title: 'My name' })
     w.files.set(RECORD, record('user'))
     engine(on, w, DESKTOP_ENV)

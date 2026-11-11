@@ -7,6 +7,8 @@ Sort the chats in the Claude desktop app's sidebar into **folders with your own 
 - Type `/folder <name>` to move a chat by hand. The folder is made if it is new.
 - A chat stays in its folder until you move it. The add-on never moves a chat twice.
 
+<img src="../../docs/images/sidebar-folders.png" alt="The desktop app's sidebar with folders named Shop app, Code reviews and Side project, and /folder moving a chat" width="80%">
+
 ## Why you want it
 
 - **The sidebar groups by repository by default.** That is rarely how you think about your work. With folders you choose the groups: "Code reviews", "Bug fixes", "Side project".
@@ -45,9 +47,10 @@ You can also write the file yourself (or ask Claude to):
 
 | Field | What it does |
 | --- | --- |
-| `name` | The folder's name in the sidebar. It is made the first time a chat goes in. Names match any case. |
+| `name` | The folder's name in the sidebar. It is made the first time a chat goes in. Names match any case, and a name without the emoji or symbols in front still finds its folder ("Shop app" finds "🟣 Shop app"). |
 | `projects` | Project folders. A chat whose folder is one of these, or inside one, matches. `~` is your home folder. |
 | `titles` | Words. A chat whose title holds one of them (any case) matches. |
+| `id` | Added by the add-on the first time the rule finds its folder. It keeps the rule on that folder after you rename the folder in the sidebar. Delete it to point the rule at a folder by `name` again. |
 | `followParent` | `true` (the default): a chat Claude started goes into its parent's folder first. `false` turns that off. |
 
 ## Install
@@ -107,6 +110,8 @@ git -C ~/.claude-tools pull
 
 Then start a new chat. Claude runs a saved copy of the add-on; the install script brings that copy up to date, so a pull alone changes nothing.
 
+**1.1.0:** renaming a folder in the sidebar no longer breaks its rule (before, the next new chat made a second folder with the old name). A rule saves its folder's `id`, and a name with emoji in front is found without them.
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -118,7 +123,7 @@ Then start a new chat. Claude runs a saved copy of the add-on; the install scrip
 
 ## Tested
 
-- 22 automated tests, with stand-ins for the engine, the files and the app's session and sidebar servers: `claude plugin test tools/sidebar-folders`. They cover each rule kind, rule order, following the parent, a chat already in a folder, a resumed chat, a chat the app started ahead of time in a spare folder, the app not answering at first, the terminal, and every form of `/folder`.
+- 25 automated tests, with stand-ins for the engine, the files and the app's session and sidebar servers: `claude plugin test tools/sidebar-folders`. They cover each rule kind, rule order, following the parent, a chat already in a folder, a resumed chat, a chat the app started ahead of time in a spare folder, a folder renamed in the sidebar, the app not answering at first, the terminal, and every form of `/folder`.
 - The answers the app's servers give (a chat's details, the folder list, "No custom sidebar groups.") were checked against the real desktop app on macOS (2026-11-11).
 - **Not yet tried end to end in the app:** a new chat filing itself, and `/folder` typed in a chat.
 
@@ -128,5 +133,5 @@ Then start a new chat. Claude runs a saved copy of the add-on; the install scrip
 | --- | --- |
 | `hooks/register.ts` | Files the chat when it starts and after its first turns; answers `/folder` |
 | `hooks/folders.ts` | The rules file, which folder a chat belongs in, and reading the app's answers |
-| `tests/` | 22 tests |
+| `tests/` | 25 tests |
 | `install.sh`, `uninstall.sh` | Add and remove it |

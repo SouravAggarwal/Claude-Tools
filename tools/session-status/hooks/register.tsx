@@ -60,6 +60,8 @@ type Live = {
 // heartbeat writes a fresh status.
 let live: Live | null = null
 let markers: MarkerSet = 'A'
+/** Rename a chat the person named, too: the app asks them to approve each change. */
+let updateRenamed = true
 /** Subagent loops running now, by agent id. */
 const loops = new Set<string>()
 /** Background work started and not yet heard to finish: agents, shells, monitors, workflows. */
@@ -196,7 +198,7 @@ async function syncTitle($: EngineInterface): Promise<void> {
 
   const next = withMarker(current, label)
   if (next !== current) {
-    if (!mayRename(await readTitleSource($), current, titles.lastWritten)) {
+    if (!mayRename(await readTitleSource($), current, titles.lastWritten, updateRenamed)) {
       // The person's own name stays exactly as they wrote it; check again when the marker next changes.
       titles.applied = label
       titles.base = current
@@ -206,7 +208,7 @@ async function syncTitle($: EngineInterface): Promise<void> {
       const written = await $.mcp.call(SESSIONS_SERVER, 'set_session_title', { session_id: 'self', title: next })
       if (written.isError) throw new Error('set_session_title refused')
     } catch {
-      // Refused (a Deny, say): never ask again in this chat.
+      // Refused (a Deny, or the person said no to renaming a chat they named): never ask again in this chat.
       titles.isRefused = true
       return
     }
@@ -305,6 +307,7 @@ async function openSession($: EngineInterface, row: BoardRow): Promise<void> {
 
 export const register: Register = (on, options) => {
   markers = markerSetOf(options.markers)
+  updateRenamed = options.renamedChats !== 'leave'
 
   on('session.start', async ($, e, next) => {
     const answer = await next(e)

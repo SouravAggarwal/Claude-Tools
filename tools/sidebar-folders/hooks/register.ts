@@ -1,15 +1,17 @@
 import type { EngineInterface, Register } from 'claude-code'
 
+import type { Group } from './folders'
 import {
   createdIdOf,
-  summary,
+  findGroup,
   groupsOf,
   parseCommand,
   parseConfig,
-  pickFolder,
-  sameName,
+  pickRule,
   sessionOf,
+  summary,
   withProjectRule,
+  withRuleFolder,
 } from './folders'
 
 // The desktop app's own MCP servers: one knows each chat, the other the sidebar's folders.
@@ -59,16 +61,26 @@ async function call($: EngineInterface, server: string, tool: string, args: Reco
   return answer
 }
 
-// The id of the folder with this name (any case), made when there is none yet.
-async function folderId($: EngineInterface, name: string): Promise<string> {
-  const listed = groupsOf(await call($, SIDEBAR_SERVER, 'list_groups', {})).find(group => sameName(group.name, name))
-  if (listed !== undefined) return listed.id
+// The folder for this name (or a rule's saved id), made when there is none yet.
+async function folderFor($: EngineInterface, name: string, id: string | null = null): Promise<Group> {
+  const listed = findGroup(groupsOf(await call($, SIDEBAR_SERVER, 'list_groups', {})), name, id)
+  if (listed !== undefined) return listed
   const created = createdIdOf(await call($, SIDEBAR_SERVER, 'create_group', { name }))
-  if (created !== null) return created
-  const found = groupsOf(await call($, SIDEBAR_SERVER, 'list_groups', {})).find(group => sameName(group.name, name))
+  if (created !== null) return { id: created, name, count: 0 }
+  const found = findGroup(groupsOf(await call($, SIDEBAR_SERVER, 'list_groups', {})), name)
   if (found === undefined) throw new Error('folder not found after create_group')
 
-  return found.id
+  return found
+}
+
+// Saves the folder's id in the rule, so renaming the folder in the sidebar keeps the rule.
+async function rememberFolder($: EngineInterface, rulesPath: string, rule: { name: string; id: string | null }, groupId: string): Promise<void> {
+  try {
+    const updated = withRuleFolder(await readText($, rulesPath), rule, groupId)
+    if (updated !== null) await $.fs.write(rulesPath, updated)
+  } catch {
+    // The rule still finds the folder by name next time.
+  }
 }
 
 async function moveSelf($: EngineInterface, groupId: string | null): Promise<void> {
@@ -108,7 +120,8 @@ async function fileOnce($: EngineInterface, isAfterTurn: boolean): Promise<void>
   try {
     await refreshChat($, chat)
     if (chat.hostId === null || chat.isFiled) return
-    const config = parseConfig(await readText($, `${chat.configDir}/${RULES_FILE}`))
+    const rulesPath = `${chat.configDir}/${RULES_FILE}`
+    const config = parseConfig(await readText($, rulesPath))
     const self = sessionOf(await call($, SESSIONS_SERVER, 'get_session', { session_id: 'self' }))
     if (self.groupId !== null) return await markFiled($)
 
@@ -120,10 +133,12 @@ async function fileOnce($: EngineInterface, isAfterTurn: boolean): Promise<void>
       }
     }
 
-    const name = pickFolder(config, { cwd: chat.cwd, title: self.title, home: chat.home })
-    if (name !== null) {
-      await moveSelf($, await folderId($, name))
-      return await markFiled($)
+    const rule = pickRule(config, { cwd: chat.cwd, title: self.title, home: chat.home })
+    if (rule !== null) {
+      const group = await folderFor($, rule.name, rule.id)
+      await moveSelf($, group.id)
+      await markFiled($)
+      return await rememberFolder($, rulesPath, rule, group.id)
     }
 
     if (isAfterTurn) {
@@ -135,10 +150,19 @@ async function fileOnce($: EngineInterface, isAfterTurn: boolean): Promise<void>
   }
 }
 
-function queueFiling($: EngineInterface, isAfterTurn: boolean): Promise<void> {
-  queue = queue.then(() => fileOnce($, isAfterTurn)).catch(() => undefined)
+// One at a time: filing and /folder both read and write the rules file, and must not overwrite each other.
+function inQueue<T>(work: () => Promise<T>): Promise<T> {
+  const done = queue.then(work)
+  queue = done.then(
+    () => undefined,
+    () => undefined,
+  )
 
-  return queue
+  return done
+}
+
+function queueFiling($: EngineInterface, isAfterTurn: boolean): Promise<void> {
+  return inQueue(() => fileOnce($, isAfterTurn)).catch(() => undefined)
 }
 
 async function runCommand($: EngineInterface, args: string): Promise<string> {
@@ -164,15 +188,16 @@ async function runCommand($: EngineInterface, args: string): Promise<string> {
     return 'Took this chat out of its folder. Rules will not move it again.'
   }
 
-  await moveSelf($, await folderId($, command.name))
+  const group = await folderFor($, command.name)
+  await moveSelf($, group.id)
   await markFiled($)
-  if (!command.remember) return `Moved this chat to "${command.name}".`
+  if (!command.remember) return `Moved this chat to "${group.name}".`
 
   const cwd = chat?.cwd ?? ''
   const project = home !== '' && cwd.startsWith(`${home}/`) ? `~${cwd.slice(home.length)}` : cwd
-  await $.fs.write(rulesPath, withProjectRule(await readText($, rulesPath), command.name, project))
+  await $.fs.write(rulesPath, withProjectRule(await readText($, rulesPath), group, project))
 
-  return `Moved this chat to "${command.name}". New chats in ${project} will go there too.`
+  return `Moved this chat to "${group.name}". New chats in ${project} will go there too.`
 }
 
 export const register: Register = on => {
@@ -214,7 +239,7 @@ export const register: Register = on => {
 
   on('command.run', { command: 'folder' }, async ($, e) => {
     try {
-      return { text: await runCommand($, e.args) }
+      return { text: await inQueue(() => runCommand($, e.args)) }
     } catch {
       return { text: `Could not reach the sidebar. ${NOT_DESKTOP}` }
     }

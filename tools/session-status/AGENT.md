@@ -64,7 +64,7 @@ It leaves `~/.claude-session-status/` in place and prints how to delete it. Only
 | Symptom | What to do |
 | --- | --- |
 | `claude plugin install` says the marketplace is missing | Run `claude plugin marketplace add ~/.claude-tools`, then step 3 again. |
-| A chat the person renamed shows no marker | On purpose: a chat they named keeps their name exactly, because the app would ask them to approve every rename. The `/sessions` board still shows its state. Markers come back only if Claude renames the chat later; a marker kept inside their own name stays as plain text. |
-| The person sees an approval card for a rename | They are on version 1.0.1 or older. Update: `git -C ~/.claude-tools pull`, then run step 3 again and start a new chat. |
+| A chat the person renamed shows an old marker | The **Chats you renamed** option is `leave`, they said no to an approval box in that chat, or they are on 1.0.x. Update (`git -C ~/.claude-tools pull`, then step 3 again) and start a new chat. |
+| The person sees an approval box for each marker change | That chat has a name they gave it, and **Chats you renamed** is `update` (the default): the app asks before renaming a name the person gave. To stop the boxes, set it to `leave` in `/config`. |
 | No marker in the sidebar | Markers only appear in the desktop app, and only after the app has named the chat. Check the **Sidebar markers** option is not `off`. |
 | Nothing shows at all | Run `claude -p "hi" --debug-file /tmp/claude-debug.log` and `grep session-status /tmp/claude-debug.log`. "rollout flag ... is off" means Claude Code is too old: `claude update`. |

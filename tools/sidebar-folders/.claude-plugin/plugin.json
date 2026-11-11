@@ -1,6 +1,6 @@
 {
   "name": "sidebar-folders",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Folders with your own names in the desktop app's sidebar: new chats file themselves by project or title, chats Claude starts follow their parent, and /folder moves a chat by hand.",
   "author": {
     "name": "Sourav Aggarwal",

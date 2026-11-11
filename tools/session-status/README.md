@@ -40,7 +40,7 @@ One rule decides the state. It checks these in order and takes the first that fi
 - Each session writes one small file to `~/.claude-session-status/`: its state, steps, helpers, title, folder, and account. It works without any other tool installed.
 - If [multi-account](../multi-account) reports the same session, the board shows that session's account.
 - **Sidebar marker (desktop app only):** the add-on renames the chat through the app's own session server (`ccd_session_mgmt`). It keeps your title and only swaps the marker in front. It renames only when the marker or the count changes. It waits for the app to name a new chat first. In the terminal it does nothing, and if the app ever refuses a rename, it stops renaming that chat.
-- **A chat you rename keeps your name exactly** and shows no marker. The app would ask you to approve every rename of a name you gave, so the add-on never renames it. To know who named the chat, it reads one field (`titleSource`) from the app's own record of the chat, and nothing else. If it cannot read that record, it only renames a title that is exactly the one it wrote last.
+- **A chat you renamed** keeps your words, and its marker stays current. The app asks you to approve each rename of a name you gave, so in that chat you see a small approval box each time the marker changes. Say no once and the add-on stops renaming that chat. Prefer no boxes? Set **Chats you renamed** to `leave` (see Options). To know who named the chat, it reads one field (`titleSource`) from the app's own record of the chat, and nothing else. If it cannot read that record, it only renames a title that is exactly the one it wrote last.
 - **Board:** `/sessions` opens a pane beside the chat. It refreshes every 3 seconds. Click a chat's title to open that chat in the desktop app (macOS `open`).
 
 ## Install
@@ -84,10 +84,12 @@ The installer sets `A` the first time and never changes your pick after that. Pi
 | `C` | 🔵 | 🟡 | 🟢 | 🔴 |
 | `off` | no marker; an old one is taken away | | | |
 
-**A chat you rename** keeps your name exactly and shows no marker. The `/sessions` board still shows its state.
+**Chats you renamed** (the `renamedChats` option):
 
-- Markers come back only if Claude renames the chat later.
-- A marker you keep inside your own name (say `⏳ 2/5 city url`) stays as plain text. It is not updated.
+| Value | What happens in a chat you renamed |
+| --- | --- |
+| `update` (default) | Your words stay; the marker in front stays current. The app shows an approval box for each change. Say no once and that chat is left alone. |
+| `leave` | No renames and no boxes. A marker kept inside your own name (say `⏳ 2/5 city url`) stays as plain text and can go out of date. The `/sessions` board still shows the real state. |
 
 ## Remove
 
@@ -114,7 +116,8 @@ Then start a new chat. Claude runs a saved copy of the add-on; the install scrip
 
 | Problem | Fix |
 | --- | --- |
-| A chat you renamed shows no marker | That is on purpose: your name stays as you wrote it. See its state on the `/sessions` board. |
+| A chat you renamed shows an old marker | It is on `leave`, or you said no to an approval box in that chat. With `update` (the default), start a new chat after updating. See its state on the `/sessions` board. |
+| An approval box every time a marker changes | That chat has a name you gave it, and **Chats you renamed** is `update`. Set it to `leave` to stop the boxes. |
 | No marker in the sidebar | Markers only work in the desktop app. Check that the option is not `off`. A brand-new chat gets its marker once the app has named it. |
 | A chat says **working** but looks quiet | Something it started is still running (a helper agent or a background command). The board says how many. |
 | A row says "Not running" | That session stopped sending updates for over 2 minutes while working: its process has gone. |
@@ -133,7 +136,9 @@ In that test, renaming a chat by hand made the app ask to approve each later ren
 
 Version 1.0.3 (2026-11-11) fixes chats that never got a marker or showed the wrong project. The desktop app now starts some chats ahead of time, in a spare folder, before it knows which chat they are. Before, a chat like that could stay unmarked for good, because the app's session server did not answer at first and the add-on gave up after 3 tries. Now it waits for the next heartbeat (30 seconds) and tries again, and it reads the chat's real folder each time it reports. Found in real status files: 5 of 16 chats started this way had no marker, against 3 of 88 others. The fix has automated tests, but has **not yet been tried in the app**.
 
-Also 46 automated tests, with stand-ins for the engine, the files, the app's session server and `open`, on the terminal and desktop surfaces: `claude plugin test tools/session-status`.
+Version 1.1.0 (2026-11-11) fixes markers that stayed wrong in chats you renamed. Renaming a chat in the sidebar kept the old marker inside your new name (say `⏳ 0/8 AWS`), and the add-on then never touched that chat again, so the marker stayed wrong for good. In real chats, 2 of 5 chats named by hand were stuck like this. Now the marker stays current (the new **Chats you renamed** option, `update` by default). The fix has automated tests, but has **not yet been tried in the app**.
+
+Also 47 automated tests, with stand-ins for the engine, the files, the app's session server and `open`, on the terminal and desktop surfaces: `claude plugin test tools/session-status`.
 
 ## Files
 
@@ -142,7 +147,7 @@ Also 46 automated tests, with stand-ins for the engine, the files, the app's ses
 | `hooks/register.tsx` | Watches the session, writes its status file, marks the title, draws the board |
 | `hooks/status.ts` | The state rule, the markers, and how the board reads the files |
 | `hooks/plan.ts` | Counts the steps. The same file as `tools/task-progress/hooks/plan.ts` (see below) |
-| `tests/` | 46 tests |
+| `tests/` | 47 tests |
 | `install.sh`, `uninstall.sh` | Add and remove it |
 
 `hooks/plan.ts` is a copy, not an import. Each add-on is installed as its own folder, so one cannot import a file from another. Keep the two copies the same: `diff tools/task-progress/hooks/plan.ts tools/session-status/hooks/plan.ts` must print nothing.

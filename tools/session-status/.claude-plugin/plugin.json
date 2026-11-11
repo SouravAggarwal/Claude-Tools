@@ -1,6 +1,6 @@
 {
   "name": "session-status",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Shows which sessions are working, need you, or are done: a marker in the desktop app's sidebar title and a /sessions board. No alerts.",
   "author": {
     "name": "Sourav Aggarwal",
@@ -14,7 +14,22 @@
       "title": "Sidebar markers",
       "description": "The marks put before each chat's title in the desktop app's sidebar. A: ⏳ working, 💬 needs you, ✅ done, ⚠️ failed. B: 🔹 🔸 ✔️ ❗. C: 🔵 🟡 🟢 🔴. off: no marks.",
       "default": "A",
-      "options": ["A", "B", "C", "off"]
+      "options": [
+        "A",
+        "B",
+        "C",
+        "off"
+      ]
+    },
+    "renamedChats": {
+      "type": "string",
+      "title": "Chats you renamed",
+      "description": "update: keep the marker current in a chat you renamed; the app asks you to approve each change, and saying no stops it for that chat. leave: never rename a chat you named, so a marker kept in your name can go out of date.",
+      "default": "update",
+      "options": [
+        "update",
+        "leave"
+      ]
     }
   }
 }

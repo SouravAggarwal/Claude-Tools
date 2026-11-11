@@ -4,6 +4,8 @@
 /** One rule: the sidebar folder `name`, and what puts a chat in it. */
 export type Rule = {
   name: string
+  /** The folder's id, saved the first time the rule finds it, so a rename in the sidebar keeps the rule. */
+  id: string | null
   /** Project folders: a chat whose working folder is one of these, or inside one, matches. */
   projects: string[]
   /** Words: a chat whose title holds one of these (any case) matches. */
@@ -58,9 +60,14 @@ export function parseConfig(text: string | null): Config {
   const rules: Rule[] = []
   for (const item of Array.isArray(record.rules) ? record.rules : []) {
     if (typeof item !== 'object' || item === null) continue
-    const rule = item as { name?: unknown; projects?: unknown; titles?: unknown }
+    const rule = item as { name?: unknown; id?: unknown; projects?: unknown; titles?: unknown }
     if (typeof rule.name !== 'string' || rule.name.trim() === '') continue
-    rules.push({ name: rule.name.trim(), projects: strings(rule.projects), titles: strings(rule.titles) })
+    rules.push({
+      name: rule.name.trim(),
+      id: typeof rule.id === 'string' && rule.id !== '' ? rule.id : null,
+      projects: strings(rule.projects),
+      titles: strings(rule.titles),
+    })
   }
 
   return { followParent: record.followParent !== false, rules }
@@ -83,42 +90,100 @@ export function isInside(cwd: string, folder: string): boolean {
 }
 
 /**
- * The folder a chat belongs in, or null. Rules are checked in order and the first match wins. With no
+ * The rule a chat belongs to, or null. Rules are checked in order and the first match wins. With no
  * title yet, only project rules can match.
  */
-export function pickFolder(config: Config, chat: { cwd: string; title: string | null; home: string }): string | null {
+export function pickRule(config: Config, chat: { cwd: string; title: string | null; home: string }): Rule | null {
   const title = chat.title?.toLowerCase() ?? null
   for (const rule of config.rules) {
-    if (rule.projects.some(project => isInside(chat.cwd, expandHome(project, chat.home)))) return rule.name
-    if (title !== null && rule.titles.some(word => title.includes(word.toLowerCase()))) return rule.name
+    if (rule.projects.some(project => isInside(chat.cwd, expandHome(project, chat.home)))) return rule
+    if (title !== null && rule.titles.some(word => title.includes(word.toLowerCase()))) return rule
   }
 
   return null
 }
 
-/** The rules file with a project rule added for `name`, keeping everything else in it. */
-export function withProjectRule(text: string | null, name: string, project: string): string {
-  let raw: Record<string, unknown> = {}
+/**
+ * The folder for a rule or a typed name: the one with the rule's saved id, else the same name (any case),
+ * else the one folder whose name is the same once leading emoji and symbols go ("Garden" finds
+ * "🟢 Garden", but "C" never finds "C++"). Undefined when there is none, or the loose match is not unique.
+ */
+export function findGroup(groups: Group[], name: string, id: string | null = null): Group | undefined {
+  const byId = id === null ? undefined : groups.find(group => group.id === id)
+  if (byId !== undefined) return byId
+  const byName = groups.find(group => sameName(group.name, name))
+  if (byName !== undefined) return byName
+  const loose = looseName(name)
+  const alike = loose === '' ? [] : groups.filter(group => looseName(group.name) === loose)
+
+  return alike.length === 1 ? alike[0] : undefined
+}
+
+function looseName(name: string): string {
+  return name.replace(/^[^\p{L}\p{N}]+/u, '').trim().toLowerCase()
+}
+
+type RawRules = { raw: Record<string, unknown>; rules: unknown[] }
+
+// The rules file as plain JSON, so a write keeps everything in it. Null when there is a file that does not
+// parse: it may be half written by another chat, or broken by hand, and is never written over.
+function rawRules(text: string | null): RawRules | null {
+  if (text === null || text.trim() === '') return { raw: {}, rules: [] }
   try {
-    const parsed: unknown = text === null || text.trim() === '' ? {} : JSON.parse(text)
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) raw = { ...(parsed as Record<string, unknown>) }
+    const parsed: unknown = JSON.parse(text)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
+    const raw = parsed as Record<string, unknown>
+
+    return { raw, rules: Array.isArray(raw.rules) ? [...(raw.rules as unknown[])] : [] }
   } catch {
-    // A broken file is replaced by one that works; the old text is not kept.
+    return null
   }
-  const rules = Array.isArray(raw.rules) ? [...(raw.rules as unknown[])] : []
-  const index = rules.findIndex(
-    item => typeof item === 'object' && item !== null && sameName((item as { name?: unknown }).name, name),
-  )
+}
+
+function fieldOf(item: unknown, key: string): unknown {
+  return typeof item === 'object' && item !== null ? (item as Record<string, unknown>)[key] : undefined
+}
+
+// The rule for this folder: the one with its id, else the first one of that name with no id yet.
+function ruleIndex(rules: unknown[], name: string, id: string | null): number {
+  const byId = id === null ? -1 : rules.findIndex(item => fieldOf(item, 'id') === id)
+  if (byId !== -1) return byId
+
+  return rules.findIndex(item => typeof fieldOf(item, 'id') !== 'string' && sameName(fieldOf(item, 'name'), name))
+}
+
+/**
+ * The rules file with the folder id saved in `rule`, so renaming the folder in the sidebar keeps the rule.
+ * The rule's name stays as written. Null when there is nothing to save or the file cannot be read.
+ */
+export function withRuleFolder(text: string | null, rule: { name: string; id: string | null }, groupId: string): string | null {
+  if (rule.id === groupId) return null
+  const file = rawRules(text)
+  if (file === null) return null
+  const index = ruleIndex(file.rules, rule.name, rule.id)
+  if (index === -1) return null
+  file.rules[index] = { ...(file.rules[index] as Record<string, unknown>), id: groupId }
+
+  return `${JSON.stringify({ ...file.raw, rules: file.rules }, null, 2)}\n`
+}
+
+/**
+ * The rules file with `project` added to the folder's rule (a new rule if it has none), keeping everything
+ * else in it. Throws when there is a file that does not parse, rather than lose the rules in it.
+ */
+export function withProjectRule(text: string | null, group: { id: string; name: string }, project: string): string {
+  const file = rawRules(text)
+  if (file === null) throw new Error('the rules file is not valid JSON')
+  const index = ruleIndex(file.rules, group.name, group.id)
   if (index === -1) {
-    rules.push({ name, projects: [project] })
+    file.rules.push({ name: group.name, id: group.id, projects: [project] })
   } else {
-    const rule = { ...(rules[index] as Record<string, unknown>) }
+    const rule = file.rules[index] as Record<string, unknown>
     const projects = strings(rule.projects)
-    if (!projects.includes(project)) rule.projects = [...projects, project]
-    rules[index] = rule
+    file.rules[index] = { ...rule, id: group.id, projects: projects.includes(project) ? projects : [...projects, project] }
   }
 
-  return `${JSON.stringify({ followParent: true, ...raw, rules }, null, 2)}\n`
+  return `${JSON.stringify({ followParent: true, ...file.raw, rules: file.rules }, null, 2)}\n`
 }
 
 export function sameName(a: unknown, b: string): boolean {

@@ -131,12 +131,13 @@ describe("whose name the chat has", () => {
     expect(titleSourceOf('[1]')).toBe('unknown')
   })
 
-  test('renames only when nobody else named the chat', () => {
-    expect(mayRename('user', 'Mine', null)).toBe(false)
-    expect(mayRename('other', 'Anything', 'Else')).toBe(true)
-    expect(mayRename('unknown', 'First title', null)).toBe(true)
-    expect(mayRename('unknown', '⏳ 1/3 Fix', '⏳ 1/3 Fix')).toBe(true)
-    expect(mayRename('unknown', 'Renamed by hand', '⏳ 1/3 Fix')).toBe(false)
+  test("renames a chat the person named only when the option says so, and someone else's always", () => {
+    expect(mayRename('user', 'Mine', null, true)).toBe(true)
+    expect(mayRename('user', 'Mine', null, false)).toBe(false)
+    expect(mayRename('other', 'Anything', 'Else', false)).toBe(true)
+    expect(mayRename('unknown', 'First title', null, true)).toBe(true)
+    expect(mayRename('unknown', '⏳ 1/3 Fix', '⏳ 1/3 Fix', true)).toBe(true)
+    expect(mayRename('unknown', 'Renamed by hand', '⏳ 1/3 Fix', true)).toBe(false)
   })
 })
 

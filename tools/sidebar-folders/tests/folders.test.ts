@@ -7,10 +7,12 @@ import {
   isInside,
   parseCommand,
   parseConfig,
-  pickFolder,
+  findGroup,
+  pickRule,
   sessionOf,
   summary,
   withProjectRule,
+  withRuleFolder,
 } from '../hooks/folders'
 
 const HOME = '/home/demo'
@@ -40,8 +42,8 @@ describe('the rules file', () => {
     expect(config).toEqual({
       followParent: false,
       rules: [
-        { name: 'Reviews', projects: [], titles: ['review'] },
-        { name: 'Shop', projects: ['~/shop'], titles: [] },
+        { name: 'Reviews', id: null, projects: [], titles: ['review'] },
+        { name: 'Shop', id: null, projects: ['~/shop'], titles: [] },
       ],
     })
   })
@@ -59,15 +61,15 @@ describe('which folder a chat goes in', () => {
   )
 
   test('a project rule matches the folder itself and anything inside it, not a look-alike', () => {
-    expect(pickFolder(config, { cwd: `${HOME}/code/shop`, title: null, home: HOME })).toBe('Shop')
-    expect(pickFolder(config, { cwd: `${HOME}/code/shop/api`, title: null, home: HOME })).toBe('Shop')
-    expect(pickFolder(config, { cwd: `${HOME}/code/shop-old`, title: null, home: HOME })).toBe('Everything else')
-    expect(pickFolder(config, { cwd: '/tmp/x', title: null, home: HOME })).toBeNull()
+    expect(pickRule(config, { cwd: `${HOME}/code/shop`, title: null, home: HOME })?.name).toBe('Shop')
+    expect(pickRule(config, { cwd: `${HOME}/code/shop/api`, title: null, home: HOME })?.name).toBe('Shop')
+    expect(pickRule(config, { cwd: `${HOME}/code/shop-old`, title: null, home: HOME })?.name).toBe('Everything else')
+    expect(pickRule(config, { cwd: '/tmp/x', title: null, home: HOME })?.name ?? null).toBeNull()
   })
 
   test('a title rule matches any case, and the first matching rule wins', () => {
-    expect(pickFolder(config, { cwd: `${HOME}/code/shop`, title: '⏳ 2/5 review the cart', home: HOME })).toBe('Reviews')
-    expect(pickFolder(config, { cwd: '/tmp/x', title: 'Fix the cart', home: HOME })).toBeNull()
+    expect(pickRule(config, { cwd: `${HOME}/code/shop`, title: '⏳ 2/5 review the cart', home: HOME })?.name).toBe('Reviews')
+    expect(pickRule(config, { cwd: '/tmp/x', title: 'Fix the cart', home: HOME })?.name ?? null).toBeNull()
   })
 
   test('home folder paths expand, and trailing slashes do not matter', () => {
@@ -87,13 +89,48 @@ describe('/folder', () => {
     expect(parseCommand('--project Shop work')).toEqual({ kind: 'move', name: 'Shop work', remember: true })
   })
 
-  test('adds a project to a rule of the same name, or a new rule, keeping the rest of the file', () => {
+  test('adds a project to the folder\'s rule, or a new rule, keeping the rest of the file', () => {
     const before = JSON.stringify({ followParent: false, rules: [{ name: 'shop', titles: ['cart'] }], note: 'mine' })
-    const after = JSON.parse(withProjectRule(before, 'Shop', '~/code/shop'))
-    expect(after).toEqual({ followParent: false, note: 'mine', rules: [{ name: 'shop', titles: ['cart'], projects: ['~/code/shop'] }] })
+    const shop = { id: 'g1', name: 'Shop' }
+    const after = JSON.parse(withProjectRule(before, shop, '~/code/shop'))
+    expect(after).toEqual({ followParent: false, note: 'mine', rules: [{ name: 'shop', titles: ['cart'], id: 'g1', projects: ['~/code/shop'] }] })
 
-    expect(JSON.parse(withProjectRule(JSON.stringify(after), 'Shop', '~/code/shop')).rules[0].projects).toEqual(['~/code/shop'])
-    expect(JSON.parse(withProjectRule(null, 'Docs', '~/docs'))).toEqual({ followParent: true, rules: [{ name: 'Docs', projects: ['~/docs'] }] })
+    // Found by its id after the folder was renamed in the sidebar; the project is not added twice.
+    const renamed = JSON.parse(withProjectRule(JSON.stringify(after), { id: 'g1', name: '🛒 Store' }, '~/code/shop'))
+    expect(renamed.rules).toEqual(after.rules)
+    expect(JSON.parse(withProjectRule(null, { id: 'g2', name: 'Docs' }, '~/docs'))).toEqual({
+      followParent: true,
+      rules: [{ name: 'Docs', id: 'g2', projects: ['~/docs'] }],
+    })
+    expect(() => withProjectRule('{"rules": [', shop, '~/x')).toThrow()
+  })
+
+  test('finds a folder by the saved id, then by name, then by the one name left once emoji go', () => {
+    const groups = [
+      { id: 'g1', name: '🟢 Garden', count: 0 },
+      { id: 'g2', name: 'Reviews', count: 0 },
+      { id: 'g3', name: 'C++', count: 0 },
+      { id: 'g4', name: '🟢 Shop', count: 0 },
+      { id: 'g5', name: '🔴 Shop', count: 0 },
+    ]
+    expect(findGroup(groups, 'Old name', 'g2')?.id).toBe('g2')
+    expect(findGroup(groups, 'reviews', 'gone')?.id).toBe('g2')
+    expect(findGroup(groups, 'Garden')?.id).toBe('g1')
+    expect(findGroup(groups, 'C')).toBeUndefined()
+    expect(findGroup(groups, 'Shop')).toBeUndefined()
+    expect(findGroup(groups, '🔴')).toBeUndefined()
+  })
+
+  test('saves the folder id in the rule it belongs to, keeping its name, and never writes over a broken file', () => {
+    const before = JSON.stringify({ rules: [{ name: 'Work', titles: ['x'], id: 'g9' }, { name: 'Work', projects: ['~/w'] }] })
+    const after = withRuleFolder(before, { name: 'Work', id: null }, 'g1')
+    expect(JSON.parse(after ?? '{}').rules).toEqual([
+      { name: 'Work', titles: ['x'], id: 'g9' },
+      { name: 'Work', projects: ['~/w'], id: 'g1' },
+    ])
+    expect(withRuleFolder(after, { name: 'Work', id: 'g1' }, 'g1')).toBeNull()
+    expect(withRuleFolder('{"rules": [', { name: 'Work', id: null }, 'g1')).toBeNull()
+    expect(parseConfig(after).rules.map(rule => rule.id)).toEqual(['g9', 'g1'])
   })
 
   test('says where the chat is and lists the folders', () => {
