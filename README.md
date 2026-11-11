@@ -4,11 +4,11 @@
 
 **Small, sharp add-ons that make [Claude Code](https://code.claude.com) nicer to live with.**
 
-See where a long job is at a glance, and which chat is waiting on you. Run the work on a second Claude account from the same chat, and swap the two without losing a word.
+See where a long job is at a glance, and which chat is waiting on you. Sort your chats into sidebar folders with your own names. Run the work on a second Claude account from the same chat, and swap the two without losing a word.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
 [![Claude Code add-ons](https://img.shields.io/badge/Claude%20Code-add--ons-d97757)](https://code.claude.com)
-[![Tools](https://img.shields.io/badge/tools-3-8a63d2)](#-the-tools)
+[![Tools](https://img.shields.io/badge/tools-4-8a63d2)](#-the-tools)
 [![Made on macOS](https://img.shields.io/badge/made%20on-macOS-555)](#-what-you-need)
 
 [The tools](#-the-tools) · [Install](#-install) · [Ask your AI to install](#-or-just-ask-your-ai) · [Add your own](#-add-your-own-tool)
@@ -64,6 +64,12 @@ See where a long job is at a glance, and which chat is waiting on you. Run the w
       <br><sub>Markers in the desktop app's sidebar, and the <code>/sessions</code> board</sub>
     </td>
   </tr>
+  <tr>
+    <td align="center"><b>4</b></td>
+    <td>🗂️ <b><a href="tools/sidebar-folders">Sidebar folders</a></b></td>
+    <td>Folders with your own names in the desktop app's sidebar. New chats file themselves by project folder or title words, chats Claude starts follow their parent, and <code>/folder &lt;name&gt;</code> moves a chat by hand. A chat stays where it was filed.</td>
+    <td>The sidebar's grouping by repository is not how you think about your work, and you are tired of dragging chats around.</td>
+  </tr>
 </table>
 
 Each tool has its own folder with a **README** (for you) and an **AGENT.md** (for your AI agent). Pictures are rendered from each tool's real output with demo data; click one to see it full size.
@@ -90,6 +96,10 @@ git clone https://github.com/SouravAggarwal/Claude-Tools ~/.claude-tools
 ~/.claude-tools/tools/session-status/install.sh
 ```
 
+```bash
+~/.claude-tools/tools/sidebar-folders/install.sh
+```
+
 **3. Start a new chat.** That's it. Each install script tells you what it changed and what (if anything) is next.
 
 **Update later:**
@@ -98,7 +108,7 @@ git clone https://github.com/SouravAggarwal/Claude-Tools ~/.claude-tools
 git -C ~/.claude-tools pull
 ```
 
-Then type `/reload-plugins` in any open chat.
+Then run the install script of each tool you use again (for example `~/.claude-tools/tools/session-status/install.sh`) and start a new chat. Claude runs a saved copy of each add-on, and the install script is what brings that copy up to date: a pull alone changes nothing Claude runs.
 
 <details>
 <summary><b>Only want the progress bar, with no download?</b></summary>
@@ -150,7 +160,11 @@ Claude-Tools/
     │   ├── bin/               ← claude-use, claude-ask, claude-accounts, claude-accounts-add, claude-as
     │   ├── account-status/    ← the add-on behind the live limits
     │   └── templates/
-    └── session-status/        ← 🚦 which sessions work, need you, are done
+    ├── session-status/        ← 🚦 which sessions work, need you, are done
+    │   ├── README.md · AGENT.md
+    │   ├── install.sh · uninstall.sh
+    │   └── hooks/ · tests/
+    └── sidebar-folders/       ← 🗂️ sidebar folders with your own names
         ├── README.md · AGENT.md
         ├── install.sh · uninstall.sh
         └── hooks/ · tests/

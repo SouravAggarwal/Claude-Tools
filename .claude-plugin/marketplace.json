@@ -1,6 +1,6 @@
 {
   "name": "claude-tools",
-  "description": "Small, sharp add-ons for Claude Code: a live progress bar, multi-account switching with live limits, and a status for every session.",
+  "description": "Small, sharp add-ons for Claude Code: a live progress bar, multi-account switching with live limits, a status for every session, and sidebar folders with your own names.",
   "owner": {
     "name": "Sourav Aggarwal",
     "url": "https://github.com/SouravAggarwal"
@@ -20,6 +20,11 @@
       "name": "session-status",
       "source": "./tools/session-status",
       "description": "Shows which sessions are working, need you, or are done: a marker in the desktop app's sidebar title and a /sessions board. No alerts."
+    },
+    {
+      "name": "sidebar-folders",
+      "source": "./tools/sidebar-folders",
+      "description": "Folders with your own names in the desktop app's sidebar: new chats file themselves by project or title, chats Claude starts follow their parent, and /folder moves a chat by hand."
     }
   ]
 }
