@@ -104,7 +104,11 @@ The installer sets `A` the first time and never changes your pick after that. Pi
 git -C ~/.claude-tools pull
 ```
 
-Then type `/reload-plugins` in an open chat, or start a new one.
+```bash
+~/.claude-tools/tools/session-status/install.sh
+```
+
+Then start a new chat. Claude runs a saved copy of the add-on; the install script brings that copy up to date, so a pull alone changes nothing.
 
 ## Troubleshooting
 
@@ -127,7 +131,9 @@ In a real desktop app chat on macOS (2026-10-29):
 
 In that test, renaming a chat by hand made the app ask to approve each later rename. Version 1.0.2 fixes this by never renaming a chat you named; that fix has automated tests, but has **not yet been tried in the app**. Also not yet tried: opening a chat by clicking its title on the board.
 
-Also 45 automated tests, with stand-ins for the engine, the files, the app's session server and `open`, on the terminal and desktop surfaces: `claude plugin test tools/session-status`.
+Version 1.0.3 (2026-11-11) fixes chats that never got a marker or showed the wrong project. The desktop app now starts some chats ahead of time, in a spare folder, before it knows which chat they are. Before, a chat like that could stay unmarked for good, because the app's session server did not answer at first and the add-on gave up after 3 tries. Now it waits for the next heartbeat (30 seconds) and tries again, and it reads the chat's real folder each time it reports. Found in real status files: 5 of 16 chats started this way had no marker, against 3 of 88 others. The fix has automated tests, but has **not yet been tried in the app**.
+
+Also 46 automated tests, with stand-ins for the engine, the files, the app's session server and `open`, on the terminal and desktop surfaces: `claude plugin test tools/session-status`.
 
 ## Files
 
@@ -136,7 +142,7 @@ Also 45 automated tests, with stand-ins for the engine, the files, the app's ses
 | `hooks/register.tsx` | Watches the session, writes its status file, marks the title, draws the board |
 | `hooks/status.ts` | The state rule, the markers, and how the board reads the files |
 | `hooks/plan.ts` | Counts the steps. The same file as `tools/task-progress/hooks/plan.ts` (see below) |
-| `tests/` | 45 tests |
+| `tests/` | 46 tests |
 | `install.sh`, `uninstall.sh` | Add and remove it |
 
 `hooks/plan.ts` is a copy, not an import. Each add-on is installed as its own folder, so one cannot import a file from another. Keep the two copies the same: `diff tools/task-progress/hooks/plan.ts tools/session-status/hooks/plan.ts` must print nothing.

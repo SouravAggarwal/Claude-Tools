@@ -11,7 +11,11 @@ done
 
 # The add-on is read straight from this folder, so `git pull` and then /reload-plugins updates it.
 claude plugin marketplace add "$repo" >/dev/null 2>&1 || true
+# A marketplace added earlier needs a refresh to list new add-ons and versions.
+claude plugin marketplace update claude-tools >/dev/null 2>&1 || true
 claude plugin install task-progress@claude-tools --scope user
+# Claude runs a saved copy of the add-on; a second run brings that copy up to this folder's version.
+claude plugin update task-progress@claude-tools --scope user >/dev/null 2>&1 || true
 
 # Claude's checklist tools are off by default on newer models, and the bar needs them.
 mkdir -p "$(dirname "$settings")"

@@ -75,7 +75,11 @@ claude plugin uninstall task-progress@claude-tools
 git -C ~/.claude-tools pull
 ```
 
-Then type `/reload-plugins` in an open chat, or start a new one.
+```bash
+~/.claude-tools/tools/task-progress/install.sh
+```
+
+Then start a new chat. Claude runs a saved copy of the add-on; the install script brings that copy up to date, so a pull alone changes nothing.
 
 ## Troubleshooting
 

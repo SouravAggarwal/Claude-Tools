@@ -169,6 +169,16 @@ describe('reporting a session', () => {
     expect(writes.get(FILE)?.state).toBe('ended')
   })
 
+  test('a chat the app started ahead of time in a spare folder reports the folder it works in now', async ($, on) => {
+    const writes = new Map<string, SessionStatus>()
+    engine(on, writes)
+    on('session.cwd', () => ({ value: `${HOME}/code/web-app` }))
+
+    await $.session.start({ cwd: `${HOME}/.claude/spares/spare-1`, surface: null, isInteractive: false })
+    expect(writes.get(FILE)?.cwd).toBe(`${HOME}/code/web-app`)
+    expect(writes.get(FILE)?.project).toBe('web-app')
+  })
+
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`the /accounts pane shows each account with its limits and sessions (${surface})`, async ($, on) => {
       const writes = new Map<string, SessionStatus>()

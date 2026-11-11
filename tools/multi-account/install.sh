@@ -35,7 +35,11 @@ jq --arg cmd "$hook" '
 
 # 4. The account-status add-on, for the account the desktop app is signed in to.
 claude plugin marketplace add "$repo" >/dev/null 2>&1 || true
+# A marketplace added earlier needs a refresh to list new add-ons and versions.
+claude plugin marketplace update claude-tools >/dev/null 2>&1 || true
 claude plugin install account-status@claude-tools --scope user
+# Claude runs a saved copy of the add-on; a second run brings that copy up to this folder's version.
+claude plugin update account-status@claude-tools --scope user >/dev/null 2>&1 || true
 
 case ":$PATH:" in
   *":$bin:"*) ;;

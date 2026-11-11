@@ -55,7 +55,7 @@ function status(w: World): StatusFile | undefined {
 // app's session server. Nothing runs for real.
 function engine(on: On, w: World, env: Record<string, string> = { HOME, CLAUDE_CODE_HOST_SESSION_ID: HOST_ID }) {
   mock.env(on, env)
-  mock.clock(on, { now: NOW })
+  const clock = mock.clock(on, { now: NOW })
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('session.end', ($, e) => ({ sessionId: e.sessionId }))
   on('session.id', () => ({ value: 's-cli' }))
@@ -117,6 +117,8 @@ function engine(on: On, w: World, env: Record<string, string> = { HOME, CLAUDE_C
         return { result: 'ok' }
     }
   })
+
+  return clock
 }
 
 let turns = 0
@@ -509,9 +511,9 @@ describe('the sidebar title', () => {
     expect(w.files.has(`${HOME}/.claude-session-status/s-cli.json`)).toBe(true)
   })
 
-  test('gives up quietly when the server refuses', async ($, on) => {
+  test('while the app is not ready it stays quiet, then marks the title at the next heartbeat', async ($, on) => {
     const w = world({ refuses: true })
-    engine(on, w)
+    const clock = engine(on, w)
     await begin($)
     for (let i = 0; i < 5; i += 1) {
       await startTurn($)
@@ -520,6 +522,19 @@ describe('the sidebar title', () => {
     expect(w.mcpCalls).toBe(3)
     // The status file still follows the session.
     expect(status(w)?.state).toBe('done')
+
+    // A chat the app started ahead of time: its session server answers once the chat is opened.
+    w.refuses = false
+    await clock.advance(30_000)
+    expect(w.renames).toEqual(['✅ Fix the login page'])
+  })
+
+  test('a chat started ahead of time in a spare folder reports the folder it works in now', async ($, on) => {
+    const w = world()
+    engine(on, w)
+    on('session.cwd', () => ({ value: `${HOME}/code/shop` }))
+    await $.session.start({ cwd: `${HOME}/.claude/spares/spare-1`, surface: 'desktop', isInteractive: true })
+    expect(status(w)).toMatchObject({ cwd: `${HOME}/code/shop`, project: 'shop' })
   })
 })
 

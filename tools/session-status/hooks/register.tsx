@@ -35,7 +35,9 @@ const HEARTBEAT_MS = 30_000
 const BOARD_REFRESH_MS = 3_000
 // The desktop app's own MCP server, which names its chats in the sidebar.
 const SESSIONS_SERVER = 'ccd_session_mgmt'
-// get_session may fail while the app starts; a refused rename stops renaming at once.
+// get_session fails while the app is still starting the chat (it starts some ahead of time, before it
+// knows which chat they are): after this many failures in a row, wait for the next heartbeat and try
+// again. Only a refused rename stops renaming for good.
 const TITLE_FAILURES_ALLOWED = 3
 // How long a hook waits for the sidebar rename before it lets the session go on.
 const TITLE_WAIT_MS = 1_500
@@ -63,7 +65,10 @@ const loops = new Set<string>()
 /** Background work started and not yet heard to finish: agents, shells, monitors, workflows. */
 let background = new Set<string>()
 const titles = {
+  /** This chat is one the desktop app hosts, so it has a sidebar title. */
   isOn: false,
+  /** The app refused a rename (a Deny): never ask again in this chat. */
+  isRefused: false,
   failures: 0,
   applied: null as string | null,
   base: null as string | null,
@@ -171,7 +176,7 @@ async function readTitleSource($: EngineInterface): Promise<TitleSource> {
 // Puts the marker in front of the chat's title in the desktop app's sidebar, only when it changed, and
 // never in a chat the person named: the app would ask them to approve every rename.
 async function syncTitle($: EngineInterface): Promise<void> {
-  if (live === null || !titles.isOn) return
+  if (live === null || !titles.isOn || titles.isRefused || titles.failures >= TITLE_FAILURES_ALLOWED) return
   const label = markerLabel(markers, live.state, progressOf(live.steps))
   if (label === titles.applied) return
 
@@ -181,9 +186,8 @@ async function syncTitle($: EngineInterface): Promise<void> {
     if (read.isError) throw new Error('get_session refused')
     current = titleFromSession(read)
   } catch {
-    // No such server (a terminal), or the app is not ready: try a few times, then stay quiet.
+    // The app is not ready yet: after a few tries, wait for the next heartbeat, which tries again.
     titles.failures += 1
-    if (titles.failures >= TITLE_FAILURES_ALLOWED) titles.isOn = false
     return
   }
   titles.failures = 0
@@ -203,7 +207,7 @@ async function syncTitle($: EngineInterface): Promise<void> {
       if (written.isError) throw new Error('set_session_title refused')
     } catch {
       // Refused (a Deny, say): never ask again in this chat.
-      titles.isOn = false
+      titles.isRefused = true
       return
     }
     titles.lastWritten = next
@@ -218,9 +222,34 @@ function queueTitle($: EngineInterface): Promise<void> {
   return titleQueue
 }
 
+// The app starts some chats ahead of time, in a spare folder and before it knows which chat they will be,
+// so what session.start saw can be out of date: read the folder, and any id still missing, again.
+async function refreshChat($: EngineInterface, session: Live): Promise<void> {
+  try {
+    session.cwd = await $.session.cwd()
+  } catch {
+    // An engine without $.session.cwd keeps the folder the session started in.
+  }
+  if (session.hostSessionId !== null && titles.record !== null) return
+  const [hostSessionId, execPath, accountId, organizationId] = await Promise.all([
+    $.env.get('CLAUDE_CODE_HOST_SESSION_ID'),
+    $.env.get('CLAUDE_CODE_EXECPATH'),
+    $.env.get('CLAUDE_CODE_ACCOUNT_UUID'),
+    $.env.get('CLAUDE_CODE_ORGANIZATION_UUID'),
+  ])
+  if (session.hostSessionId === null && hostSessionId) {
+    session.hostSessionId = hostSessionId
+    // Only a chat the desktop app hosts has a sidebar title to mark.
+    titles.isOn = true
+    titles.lastWritten = await readLastWritten($, session)
+  }
+  titles.record ??= recordPath({ execPath, accountId, organizationId, hostSessionId: session.hostSessionId ?? undefined })
+}
+
 async function publish($: EngineInterface): Promise<void> {
   if (live === null) return
   try {
+    await refreshChat($, live)
     const progress = progressOf(live.steps)
     const verdict = decide({ ...live.facts, helpers: helperCount(), steps: progress })
     const now = await $.clock.now()
@@ -280,35 +309,28 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const answer = await next(e)
     try {
-      const [home, hostSessionId, execPath, accountId, organizationId, sessionId, now] = await Promise.all([
-        $.env.get('HOME'),
-        $.env.get('CLAUDE_CODE_HOST_SESSION_ID'),
-        $.env.get('CLAUDE_CODE_EXECPATH'),
-        $.env.get('CLAUDE_CODE_ACCOUNT_UUID'),
-        $.env.get('CLAUDE_CODE_ORGANIZATION_UUID'),
-        $.session.id(),
-        $.clock.now(),
-      ])
+      const [home, sessionId, now] = await Promise.all([$.env.get('HOME'), $.session.id(), $.clock.now()])
       live = {
         home: home ?? '',
         cwd: e.cwd,
         sessionId,
-        hostSessionId: hostSessionId || null,
+        hostSessionId: null,
         facts: { turnRunning: false, lastEnd: null, asking: null, wrapAsk: null, wrappedUp: false },
         steps: [],
         state: 'idle',
         stateSince: now,
         ended: false,
       }
-      // Only a chat the desktop app hosts has a sidebar title to mark.
-      titles.isOn = live.hostSessionId !== null
-      titles.record = recordPath({ execPath, accountId, organizationId, hostSessionId })
-      titles.lastWritten = await readLastWritten($, live)
+      titles.isOn = false
+      titles.record = null
       await $.command.register({
         name: 'sessions',
         description: 'Show every session: which are working, which need you, which are done',
       })
-      $.clock.every(HEARTBEAT_MS, () => void publish($))
+      $.clock.every(HEARTBEAT_MS, () => {
+        titles.failures = 0
+        void publish($)
+      })
       await publish($)
     } catch {
       live = null

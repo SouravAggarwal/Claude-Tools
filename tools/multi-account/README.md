@@ -198,7 +198,7 @@ It removes the commands, the front-desk rule hook and the add-on. It keeps `~/.c
 git -C ~/.claude-tools pull
 ```
 
-The commands update at once. For the add-on, type `/reload-plugins` in an open chat. To take a newer front-desk rule, run `~/.claude-tools/tools/multi-account/install.sh --refresh-rule`, then start a new desktop chat. Configs from version 1.0 (`"active"`) are read as primary and secondary on their own.
+The commands update at once. For the add-on, run `~/.claude-tools/tools/multi-account/install.sh` again, then start a new chat: Claude runs a saved copy of the add-on, and the install script brings it up to date. To take a newer front-desk rule, run `~/.claude-tools/tools/multi-account/install.sh --refresh-rule`, then start a new desktop chat. Configs from version 1.0 (`"active"`) are read as primary and secondary on their own.
 
 ## Good to know
 
@@ -224,6 +224,6 @@ The commands update at once. For the add-on, type `/reload-plugins` in an open c
 | --- | --- |
 | `bin/claude-use`, `bin/claude-ask`, `bin/claude-accounts`, `bin/claude-accounts-add`, `bin/claude-as` | The commands (Python 3) |
 | `bin/claude_accounts_lib.py` | What the commands share: the config, the two roles, the same-account check |
-| `account-status/` | The add-on behind the live view and `/accounts` (11 tests: `claude plugin test tools/multi-account/account-status`) |
+| `account-status/` | The add-on behind the live view and `/accounts` (12 tests: `claude plugin test tools/multi-account/account-status`; version 1.1.1 reads the chat's real folder and account each time it reports, since the desktop app now starts some chats ahead of time in a spare folder) |
 | `templates/config.json`, `templates/front-desk-rule.md` | What `install.sh` copies on first install |
 | `install.sh`, `uninstall.sh` | Add and remove it |

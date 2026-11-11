@@ -62,9 +62,31 @@ let live: Live | null = null
 const taskNames = new Map<string, string>()
 let refresh: { cancel: () => void } | null = null
 
+// The desktop app starts some chats ahead of time, in a spare folder and before it knows which chat (and
+// account) they are for, so the folder, project and account are read again for every report.
+async function refreshChat($: EngineInterface, session: Live): Promise<void> {
+  try {
+    session.cwd = await $.session.cwd()
+  } catch {
+    // An engine without $.session.cwd keeps the folder the session started in.
+  }
+  const [configDirEnv, entrypoint, emailEnv, config] = await Promise.all([
+    $.env.get('CLAUDE_CONFIG_DIR'),
+    $.env.get('CLAUDE_CODE_ENTRYPOINT'),
+    $.env.get('CLAUDE_CODE_USER_EMAIL'),
+    readConfig($, session.home),
+  ])
+  const configDir = configDirEnv ?? `${session.home}/.claude`
+  // The desktop app tells its chats which account it is signed in to.
+  const email = entrypoint === 'claude-desktop' ? (emailEnv ?? '') : ''
+  session.account = accountFor(config, configDir, session.home, email)
+  session.project = projectFor(config, session.cwd, session.home)
+}
+
 async function publish($: EngineInterface) {
   if (live === null) return
   try {
+    await refreshChat($, live)
     const [sessionId, usage, model, surface, entrypoint, now] = await Promise.all([
       $.session.id(),
       $.session.usage(),
@@ -110,15 +132,10 @@ export const register: Register = on => {
     const answer = await next(e)
     try {
       const home = (await $.env.get('HOME')) ?? ''
-      const configDir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${home}/.claude`
-      // The desktop app tells its chats which account it is signed in to.
-      const fromDesktop = (await $.env.get('CLAUDE_CODE_ENTRYPOINT')) === 'claude-desktop'
-      const email = fromDesktop ? ((await $.env.get('CLAUDE_CODE_USER_EMAIL')) ?? '') : ''
-      const config = await readConfig($, home)
       live = {
         home,
-        account: accountFor(config, configDir, home, email),
-        project: projectFor(config, e.cwd, home),
+        account: 'unknown',
+        project: null,
         cwd: e.cwd,
         startedAt: (await $.session.usage()).startedAt,
         state: 'idle',
