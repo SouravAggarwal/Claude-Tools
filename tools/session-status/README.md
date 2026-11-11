@@ -34,6 +34,7 @@ One rule decides the state. It checks these in order and takes the first that fi
 
 ## How it works
 
+- **What it hooks:** `session.start`, `turn.start`, `turn.complete`, `session.end` and the stop event, to know when Claude is working; `tool.call` and `prompt.submit`, which it lets through unchanged and only reads (task-list steps, questions waiting for you, background work starting or finishing); `command.run` for `/sessions`; and `ui.render` / `ui.close` for the board. It never blocks, changes or adds to a tool call or a prompt.
 - An add-on watches the session's turns and tool calls. It never changes them.
 - Each session writes one small file to `~/.claude-session-status/`: its state, steps, helpers, title, folder, and account. It works without any other tool installed.
 - If [multi-account](../multi-account) reports the same session, the board shows that session's account.

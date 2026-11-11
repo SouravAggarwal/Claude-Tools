@@ -14,6 +14,7 @@ A **live progress bar above the prompt** for Claude's to-do list: see how many s
 
 ## How it works
 
+- **What it hooks:** `tool.call` (it lets every tool call run unchanged, then reads Claude's task-list updates to know the steps), `prompt.submit` (it puts a finished bar away when you send your next message; your message is passed on unchanged), `session.end`, and `ui.render` to draw the bar. It never blocks, changes or adds to a tool call or a prompt.
 - Claude keeps a checklist with its task tools (`TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, or the older `TodoWrite`). In the desktop app, Claude uses the app's own plan tool instead (`update_plan`, and `wrap_up` when the work is done). The add-on watches those calls and counts the steps. It never changes them.
 - It draws in the band right above the prompt box: block characters in the terminal, a rounded bar in the desktop app.
 - **One setting matters.** On newer models (for example Opus 5.5), Claude's checklist tools are off by default, so there would be nothing to count. The installer turns them on with `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in `~/.claude/settings.json`. With the tools on, Claude keeps checklists on all models, which uses a little more of each chat's context.

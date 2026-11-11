@@ -14,6 +14,7 @@
 
 ## How it works
 
+- **What it hooks:** `session.start`, `turn.complete` and `session.end` to write the chat's status; `tool.call` and `prompt.submit`, which it lets through unchanged and only reads (the current step and your last request, shortened); `command.run` for `/accounts`; and `ui.render` / `ui.close` for the panel. It never blocks, changes or adds to a tool call or a prompt.
 - It runs inside each chat and only watches. It never changes what Claude does.
 - Every 20 seconds, and at each step, it writes one small file for the chat to `~/.claude-accounts/status/`: the account, its latest 5-hour and weekly use (as Claude Code reports it), the context window, the project folder and the current step.
 - `/accounts` opens a panel beside the chat that reads those files and refreshes every 5 seconds.

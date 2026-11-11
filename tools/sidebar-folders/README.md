@@ -18,6 +18,7 @@
 
 ## How it works
 
+- **What it hooks:** `session.start`, `turn.start` and `turn.complete`, to file a new chat during its first turns; and `command.run` for `/folder`. It does not hook tool calls or prompts.
 - The desktop app already has folders (it calls them custom groups). This add-on only files chats into them, through the app's own sidebar server (`ccd_sidebar`). It does not draw anything itself.
 - **When:** as a chat starts, and after each of its first few turns (the app gives a chat its title during its first turn). As soon as a rule matches, the chat is filed, and the add-on never looks at it again.
 - **The order it checks:**
