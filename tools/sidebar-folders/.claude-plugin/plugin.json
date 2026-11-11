@@ -1,7 +1,7 @@
 {
   "name": "sidebar-folders",
   "displayName": "Sidebar Folders",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Organize your Claude desktop chats into folders with your own names. New chats sort themselves by project or title words, chats Claude starts follow their parent, and /folder moves any chat.",
   "author": {
     "name": "Sourav Aggarwal",
@@ -26,5 +26,7 @@
   ],
   "icon": "./images/icon.svg",
   "documentationUrl": "https://github.com/SouravAggarwal/Claude-Tools/tree/main/tools/sidebar-folders#readme",
-  "supportUrl": "https://github.com/SouravAggarwal/Claude-Tools/issues"
+  "supportUrl": "https://github.com/SouravAggarwal/Claude-Tools/issues",
+  "privacyPolicyUrl": "https://github.com/SouravAggarwal/Claude-Tools/blob/main/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/SouravAggarwal/Claude-Tools/blob/main/LICENSE"
 }

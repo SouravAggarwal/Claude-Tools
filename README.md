@@ -190,3 +190,7 @@ Have a tool worth sharing? Every tool follows the same simple shape: one folder,
 ## 📄 License
 
 [MIT](LICENSE). Use it, change it, share it.
+
+## 🔒 Privacy
+
+The tools collect nothing and send nothing over the internet. What they keep stays in small files on your computer: [PRIVACY.md](PRIVACY.md) lists each one.

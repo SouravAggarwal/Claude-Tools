@@ -1,7 +1,7 @@
 {
   "name": "session-status",
   "displayName": "Session Status Markers",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "See at a glance which Claude chats are working ⏳, need you 💬, are done ✅ or failed ⚠️: a live marker and step count on each chat in the desktop app's sidebar, plus a /sessions board of every chat. No pop-ups.",
   "author": {
     "name": "Sourav Aggarwal",
@@ -50,5 +50,7 @@
         "leave"
       ]
     }
-  }
+  },
+  "privacyPolicyUrl": "https://github.com/SouravAggarwal/Claude-Tools/blob/main/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/SouravAggarwal/Claude-Tools/blob/main/LICENSE"
 }
